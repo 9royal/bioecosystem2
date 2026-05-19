@@ -219,15 +219,15 @@ function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, s
   switch (id) {
     case 'home': return <BackgroundWrapper><HomeSection onComplete={() => onComplete('home')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'overview': return <BackgroundWrapper><OverviewSection onComplete={() => onComplete('overview')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'tundra': return <BackgroundWrapper bgImage="/assets/凍原.png"><TundraSection onComplete={() => onComplete('tundra')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'forest': return <BackgroundWrapper bgImage="/assets/森林.png"><ForestSection onComplete={() => onComplete('forest')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'grassland': return <BackgroundWrapper bgImage="/assets/草原.png"><GrasslandSection onComplete={() => onComplete('grassland')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'desert': return <BackgroundWrapper bgImage="/assets/沙漠.png"><DesertSection onComplete={() => onComplete('desert')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'creatures': return <BackgroundWrapper bgImage="/assets/森林.png"><CreaturesSection onComplete={() => onComplete('creatures')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'freshwater': return <BackgroundWrapper bgImage="/assets/淡水.png"><FreshwaterSection onComplete={() => onComplete('freshwater')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'estuary': return <BackgroundWrapper bgImage="/assets/河口.png"><EstuarySection onComplete={() => onComplete('estuary')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'marine': return <BackgroundWrapper bgImage="/assets/海洋.png"><MarineSection onComplete={() => onComplete('marine')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'water-creatures': return <BackgroundWrapper bgImage="/assets/海洋.png"><WaterCreaturesSection onComplete={() => onComplete('water-creatures')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'tundra': return <BackgroundWrapper bgImage="./assets/凍原.png"><TundraSection onComplete={() => onComplete('tundra')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'forest': return <BackgroundWrapper bgImage="./assets/森林.png"><ForestSection onComplete={() => onComplete('forest')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'grassland': return <BackgroundWrapper bgImage="./assets/草原.png"><GrasslandSection onComplete={() => onComplete('grassland')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'desert': return <BackgroundWrapper bgImage="./assets/沙漠.png"><DesertSection onComplete={() => onComplete('desert')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'creatures': return <BackgroundWrapper bgImage="./assets/森林.png"><CreaturesSection onComplete={() => onComplete('creatures')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'freshwater': return <BackgroundWrapper bgImage="./assets/淡水.png"><FreshwaterSection onComplete={() => onComplete('freshwater')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'estuary': return <BackgroundWrapper bgImage="./assets/河口.png"><EstuarySection onComplete={() => onComplete('estuary')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'marine': return <BackgroundWrapper bgImage="./assets/海洋.png"><MarineSection onComplete={() => onComplete('marine')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'water-creatures': return <BackgroundWrapper bgImage="./assets/海洋.png"><WaterCreaturesSection onComplete={() => onComplete('water-creatures')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'comparison': return <BackgroundWrapper><ComparisonSection onComplete={() => onComplete('comparison')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'final': return <BackgroundWrapper><FinalSection onComplete={() => onComplete('final')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'ai-challenge': return <BackgroundWrapper><AISummaryChallenge onComplete={() => onComplete('ai-challenge')} onScore={scoreHandler} /></BackgroundWrapper>;
@@ -388,7 +388,7 @@ function OverviewSection({ onComplete, onScore }: { onComplete: () => void, onSc
                 categorized[eco.id] ? "border-slate-700 opacity-50" : "border-white/20 hover:border-blue-400"
               )}>
                 <img 
-                  src={`/assets/${encodeURIComponent(eco.name)}.png`} 
+                  src={`./assets/${encodeURIComponent(eco.name)}.png`} 
                   alt={eco.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -693,7 +693,7 @@ function TundraSection({ onComplete, onScore }: { onComplete: () => void, onScor
                
                <div className="aspect-square w-full rounded-[2.5rem] overflow-hidden bg-white/5 border border-white/20 shadow-inner relative group/image">
                   <img 
-                    src={`/assets/北極熊${organismConfig.fur}${organismConfig.ears}${organismConfig.fat}.png`} 
+                    src={`./assets/北極熊${organismConfig.fur}${organismConfig.ears}${organismConfig.fat}.png`} 
                     alt="北極熊特徵預覽"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover/image:scale-110"
                     referrerPolicy="no-referrer"
@@ -810,9 +810,9 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
       { id: 'evergreen', content: '溫暖濕潤，主要為常綠闊葉林，極為濕熱處形成熱帶雨林。' }
     ],
     imgs: [
-      { id: 'needle', src: '/assets/針葉林照.png' },
-      { id: 'deciduous', src: '/assets/落葉林照.png' },
-      { id: 'broad', src: '/assets/闊葉林照.png' }
+      { id: 'needle', src: './assets/針葉林照.png' },
+      { id: 'deciduous', src: './assets/落葉林照.png' },
+      { id: 'broad', src: './assets/闊葉林照.png' }
     ]
   };
 
@@ -841,7 +841,7 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
       producer: '裸子植物', 
       consumer: '熊、鹿等大哺乳類',
       taiwan: '寒冷高海拔',
-      image: '/assets/針葉林.png'
+      image: './assets/針葉林.png'
     },
     { 
       type: '落葉闊葉林', 
@@ -849,7 +849,7 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
       producer: '落葉木', 
       consumer: '動植物種類繁多',
       taiwan: '中海拔混合林',
-      image: '/assets/落葉林.png'
+      image: './assets/落葉林.png'
     },
     { 
       type: '常綠闊葉林', 
@@ -857,7 +857,7 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
       producer: '常綠木/熱帶雨林', 
       consumer: '物種最豐富多樣',
       taiwan: '溫暖低海拔',
-      image: '/assets/森林.png'
+      image: './assets/森林.png'
     }
   ];
 
@@ -3153,7 +3153,7 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
           <div 
              className="absolute inset-0 transition-opacity duration-1000 bg-cover bg-center"
              style={{ 
-               backgroundImage: `url('/assets/${scrollDepth === 0 ? '海洋表面.png' : scrollDepth <= 200 ? '海洋透光.png' : '海洋不透光.png'}')`,
+               backgroundImage: `url('./assets/${scrollDepth === 0 ? '海洋表面.png' : scrollDepth <= 200 ? '海洋透光.png' : '海洋不透光.png'}')`,
                opacity: 0.6
              }}
           />
@@ -3556,7 +3556,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
       <div className="grid lg:grid-cols-2 gap-8 items-start">
         <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
           <img 
-            src="/assets/生態系雨量溫度圖.png" 
+            src="./assets/生態系雨量溫度圖.png" 
             alt="生態系雨量溫度圖" 
             className="w-full h-auto rounded-2xl shadow-sm hover:scale-[1.02] transition-transform duration-500"
           />
