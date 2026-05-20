@@ -26,11 +26,23 @@ export default function App() {
   const [explorerScore, setExplorerScore] = useState(0);
   const [scoredIds, setScoredIds] = useState<Set<string>>(new Set());
   const [attempts, setAttempts] = useState<Record<string, number>>({});
+  const [bestScores, setBestScores] = useState<Record<string, number>>({});
 
   const handleScore = (questionId: string, isCorrect: boolean | number, componentAttempts?: number) => {
-    if (scoredIds.has(questionId)) return;
+    // For AI challenge, we allow updates if score is higher
+    if (scoredIds.has(questionId) && questionId !== 'ai_challenge') return;
     
     if (typeof isCorrect === 'number') {
+      if (questionId === 'ai_challenge') {
+        const currentBest = bestScores[questionId] || 0;
+        if (isCorrect > currentBest) {
+          setExplorerScore(prev => prev - currentBest + isCorrect);
+          setBestScores(prev => ({ ...prev, [questionId]: isCorrect }));
+        }
+        setScoredIds(prev => new Set(prev).add(questionId));
+        return;
+      }
+      
       setExplorerScore(prev => prev + isCorrect);
       setScoredIds(prev => new Set(prev).add(questionId));
       return;
@@ -3539,7 +3551,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
       setResult(data);
       setAttempts(prev => prev + 1);
       
-      if (data.score >= 180) {
+      if (data.score >= 100) {
         onScore?.('ai_challenge', data.score, attempts + 1);
         confetti({
           particleCount: 150,
@@ -3624,7 +3636,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
               className={cn(
                 "p-8 rounded-[2.5rem] border-4 shadow-2xl relative overflow-hidden",
                 result.score >= 240 ? "bg-emerald-50 border-emerald-500" : 
-                result.score >= 180 ? "bg-amber-50 border-amber-500" : "bg-red-50 border-red-500"
+                result.score >= 100 ? "bg-amber-50 border-amber-500" : "bg-red-50 border-red-500"
               )}
             >
               <div className="flex items-start justify-between relative z-10">
@@ -3632,7 +3644,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
                   <h4 className={cn(
                     "text-4xl font-black mb-2",
                     result.score >= 240 ? "text-emerald-700" : 
-                    result.score >= 180 ? "text-amber-700" : "text-red-700"
+                    result.score >= 100 ? "text-amber-700" : "text-red-700"
                   )}>
                     得分：{result.score}
                   </h4>
@@ -3645,7 +3657,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
                 {result.score >= 240 && <Trophy className="text-emerald-500 shrink-0" size={48} />}
               </div>
               
-              {result.score >= 180 && (
+              {result.score >= 100 && (
                 <div className="mt-8 flex justify-center">
                    <button 
                      onClick={onComplete}
@@ -3659,6 +3671,33 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
           )}
         </div>
       </div>
+
+      {/* Floating Score Display in Challenge Area */}
+      {result && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="fixed bottom-36 right-8 z-40 hidden sm:block"
+        >
+          <div className="bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-200 p-5 rounded-[2rem] flex items-center gap-4 ring-1 ring-black/5">
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
+              result.score >= 240 ? "bg-emerald-100 text-emerald-600" : 
+              result.score >= 100 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
+            )}>
+              <Zap size={24} fill="currentColor" className="opacity-20 absolute" />
+              <Zap size={24} className="relative z-10" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-slate-400 tracking-tighter mb-0.5">當前 AI 挑戰得分</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-slate-800">{result.score}</span>
+                <span className="text-sm font-bold text-slate-300">/ 300</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
