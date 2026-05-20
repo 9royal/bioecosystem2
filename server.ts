@@ -53,7 +53,7 @@ async function startServer() {
       `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -68,12 +68,20 @@ async function startServer() {
         },
       });
 
-      const text = response.text;
+      let text = response.text;
       if (!text) {
         throw new Error("No response text from Gemini");
       }
 
-      res.json(JSON.parse(text));
+      // Clean up markdown markers if present
+      text = text.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
+
+      try {
+        res.json(JSON.parse(text));
+      } catch (parseError) {
+        console.error("JSON Parse Error. Raw text:", text);
+        throw new Error("Failed to parse AI response as JSON");
+      }
     } catch (error: any) {
       console.error("Gemini API Error:", error);
       res.status(500).json({ error: error.message || "Failed to call Gemini API" });
