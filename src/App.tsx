@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Compass, Map, Snowflake, Trees, Wheat, Sun, Droplets, Waves, BarChart2, Trophy, 
   Lock, CheckCircle2, ChevronRight, AlertCircle, Info, Wind, Thermometer, MapPin,
-  Bird, Zap, Anchor, Ship, HelpCircle, Loader2
+  Bird, Zap, Anchor, Ship, HelpCircle, Loader2, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine 
@@ -12,14 +12,15 @@ import confetti from 'canvas-confetti';
 import { gradeAnswer } from './lib/gemini';
 import { cn } from './lib/utils';
 import { ECOSYSTEM_TABS, EcosystemId, EcosystemTab } from './types';
-import MovingChallengeGame from './components/MovingChallengeGame';
+import CreatureChallengeGame from './components/CreatureChallengeGame';
+import EcosystemChallengeGame from './components/EcosystemChallengeGame';
 
 // Components for different sections will be defined here or imported
 // For simplicity and coherence in this single-file request, I'll structure them within main components
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<EcosystemId>('home');
-  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(['home', 'overview', 'tundra', 'forest', 'grassland', 'desert', 'creatures', 'freshwater', 'estuary', 'marine', 'water-creatures', 'comparison', 'final', 'ai-challenge', 'moving-challenge']);
+  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(['home']);
   const [showUnlockAnim, setShowUnlockAnim] = useState<EcosystemId | null>(null);
 
   // Scoring System
@@ -154,7 +155,7 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            {renderSection(activeTab, unlockNext, handleScore)}
+            {renderSection(activeTab, unlockNext, handleScore, explorerScore)}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -234,7 +235,7 @@ function BackgroundWrapper({ children, bgImage }: { children: React.ReactNode, b
   );
 }
 
-function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, scoreHandler?: (qid: string, isOk: boolean | number, attempts?: number) => void) {
+function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, scoreHandler?: (qid: string, isOk: boolean | number, attempts?: number) => void, totalScore: number = 0) {
   switch (id) {
     case 'home': return <BackgroundWrapper><HomeSection onComplete={() => onComplete('home')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'overview': return <BackgroundWrapper><OverviewSection onComplete={() => onComplete('overview')} onScore={scoreHandler} /></BackgroundWrapper>;
@@ -250,9 +251,134 @@ function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, s
     case 'comparison': return <BackgroundWrapper><ComparisonSection onComplete={() => onComplete('comparison')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'final': return <BackgroundWrapper><FinalSection onComplete={() => onComplete('final')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'ai-challenge': return <BackgroundWrapper><AISummaryChallenge onComplete={() => onComplete('ai-challenge')} onScore={scoreHandler} /></BackgroundWrapper>;
-    case 'moving-challenge': return <BackgroundWrapper><MovingChallengeGame /></BackgroundWrapper>;
+    case 'creature-challenge': return <BackgroundWrapper><CreatureChallengeGame onComplete={() => onComplete('creature-challenge')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'ecosystem-challenge': return <BackgroundWrapper><EcosystemChallengeGame onComplete={() => onComplete('ecosystem-challenge')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'submit': return <BackgroundWrapper><ScoreSubmissionSection score={totalScore} onComplete={() => onComplete('submit')} /></BackgroundWrapper>;
     default: return null;
   }
+}
+
+function ScoreSubmissionSection({ score, onComplete }: { score: number, onComplete?: () => void }) {
+  const [className, setClassName] = useState<number>(1);
+  const [seatNumber, setSeatNumber] = useState<number>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      // Use the provided GAS deployment URL as the default
+      const scriptURL = localStorage.getItem('GAS_DEPLOY_URL') || 'https://script.google.com/macros/s/AKfycbwPl8EhjWCkggj4vxNZcktgtDjwK9meeAVxDkxbnpC-S6Xl9aNAZrPWUiiH6ikqgwWSPg/exec';
+      
+      const response = await fetch(scriptURL, {
+        method: 'POST',
+        mode: 'no-cors', // standard for GAS
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'score',
+          className,
+          seatNumber,
+          score
+        })
+      });
+      
+      // Since no-cors doesn't return response body, we assume success if no exception
+      setSubmitted(true);
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      onComplete?.();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-2xl mx-auto text-center bg-white p-12 rounded-[3rem] shadow-2xl border border-emerald-100"
+      >
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 size={48} />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 mb-4">成績上傳成功！</h2>
+        <p className="text-slate-500 mb-8 text-lg">
+          {className} 班 {seatNumber} 號，你的總分 {score} 已經記錄在雲端。
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all"
+        >
+          重新開始探索
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <SectionHeader title="結算與上傳成績" icon={<Trophy />} color="text-slate-800" />
+      
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100">
+        <div className="text-center mb-10">
+          <p className="text-slate-400 uppercase font-black tracking-widest text-xs mb-2">探險結束</p>
+          <h3 className="text-3xl font-black text-slate-800 mb-2">你的冒險能量值</h3>
+          <div className="text-6xl font-black text-blue-600 drop-shadow-sm">{score}</div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-black text-slate-600 ml-2">班級 (1-20)</label>
+              <select 
+                value={className}
+                onChange={(e) => setClassName(Number(e.target.value))}
+                className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-blue-500 outline-none font-bold"
+              >
+                {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} 班</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-black text-slate-600 ml-2">座號 (1-30)</label>
+              <select 
+                value={seatNumber}
+                onChange={(e) => setSeatNumber(Number(e.target.value))}
+                className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-blue-500 outline-none font-bold"
+              >
+                {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} 號</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={cn(
+              "w-full py-5 rounded-2xl font-black text-xl transition-all shadow-xl flex items-center justify-center gap-3",
+              isSubmitting ? "bg-slate-200 text-slate-400" : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 active:scale-95"
+            )}
+          >
+            {isSubmitting ? <Loader2 className="animate-spin" /> : <ChevronRight />}
+            {isSubmitting ? "上傳中..." : "確認上傳，領取結業證書"}
+          </button>
+
+          {error && (
+            <p className="text-red-500 text-center text-sm font-bold flex items-center justify-center gap-2">
+              <AlertCircle size={16} /> {error}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // 1. Home Section
@@ -561,6 +687,9 @@ function TundraSection({ onComplete, onScore }: { onComplete: () => void, onScor
       feedback.push('缺乏皮下脂肪，無法在長時間暴風雪中維持體溫。');
     }
 
+    const finalScore = score === 100;
+    onScore?.('tundra_survival', finalScore);
+    
     setSurvivalStatus({ 
       score, 
       feedback: feedback.length === 0 ? '完美適應！你創造了最強的極地王者。' : feedback[0] 
@@ -842,6 +971,16 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
   const handlePlace = (type: 'text' | 'img', rowId: string) => {
     if (!selectedSource) return;
     if (selectedSource.type !== type) return;
+    
+    // Scoring
+    const correctMap: Record<string, string> = {
+      'text_high': 'conifer', 'img_high': 'needle',
+      'text_mid': 'mixed', 'img_mid': 'deciduous',
+      'text_low': 'evergreen', 'img_low': 'broad'
+    };
+    const isCorrect = selectedSource.id === correctMap[`${type}_${rowId}`];
+    onScore?.(`forest_taiwan_${type}_${rowId}`, isCorrect);
+
     setTraits(p => ({ ...p, [`${type}_${rowId}`]: selectedSource.id }));
     setSelectedSource(null);
   };
@@ -882,6 +1021,11 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
   ];
 
   const handleTrait = (type: string, attr: string, val: string) => {
+    const forest = forestTypes.find(f => f.type === type);
+    if (forest) {
+      const isCorrect = (attr === 'producer' ? forest.producer : forest.env) === val;
+      onScore?.(`forest_trait_${type}_${attr}`, isCorrect);
+    }
     setTraits(prev => ({ ...prev, [`${type}-${attr}`]: val }));
   };
 
@@ -912,6 +1056,10 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
   const shuffledOrganisms = useMemo(() => [...forestOrganismPool].sort(() => Math.random() - 0.5), []);
 
   const toggleOrganism = (id: string) => {
+    const org = forestOrganismPool.find(o => o.id === id);
+    if (org) {
+      onScore?.(`forest_org_${id}`, org.isForest);
+    }
     setSelectedForestOrganisms(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
@@ -936,8 +1084,10 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
         <p className="mb-4">
           森林生態系的年雨量下限通常在
           <FillInTheBlank 
-            options={['750mm', '250mm', '100mm']} 
+            options={['250mm', '750mm', '100mm']} 
             correct="750mm" 
+            qid="forest_blank_1"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 1: true }))}
           />
           以上。
@@ -945,8 +1095,10 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
         <p className="mb-4">
           低溫、雨量較少的區域形成
           <FillInTheBlank 
-            options={['針葉林', '落葉闊葉林', '常綠闊葉林']} 
+            options={['落葉闊葉林', '針葉林', '常綠闊葉林']} 
             correct="針葉林" 
+            qid="forest_blank_2"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 2: true }))}
           />
           ，主要由裸子植物組成。
@@ -954,8 +1106,10 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
         <p className="mb-4">
           四季分明、氣候溫和，且秋冬會落葉的區域稱為
           <FillInTheBlank 
-            options={['落葉闊葉林', '常綠闊葉林', '熱帶雨林']} 
+            options={['常綠闊葉林', '落葉闊葉林', '熱帶雨林']} 
             correct="落葉闊葉林" 
+            qid="forest_blank_3"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 3: true }))}
           />
           。
@@ -963,8 +1117,10 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
         <p>
           溫暖而降雨豐富的區域形成常綠闊葉林，其中的
           <FillInTheBlank 
-            options={['熱帶雨林', '針葉林', '草原']} 
+            options={['針葉林', '熱帶雨林', '草原']} 
             correct="熱帶雨林" 
+            qid="forest_blank_4"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 4: true }))}
           />
           是生物種類最豐富多樣的生態系。
@@ -1307,7 +1463,13 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
 
   const handleConnect = (item: string) => {
     if (connected.includes(item)) return;
-    setConnected(prev => [...prev, item]);
+    const nextConnected = [...connected, item];
+    setConnected(nextConnected);
+    
+    if (nextConnected.length === 3) {
+      const isCorrect = nextConnected[0] === '草' && nextConnected[1] === '斑馬' && nextConnected[2] === '獅子';
+      onScore?.('grassland_food_chain', isCorrect);
+    }
   };
 
   const isChainCorrect = connected.length === 3 && connected[0] === '草' && connected[1] === '斑馬' && connected[2] === '獅子';
@@ -1347,6 +1509,7 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
       setSimulationResult('獅子太多了！斑馬將被捕食殆盡。');
     } else {
       setSimulationResult('能量傳遞平衡！符合 1/10 定律的能量金字塔。');
+      onScore?.('grassland_energy_simulation', true);
     }
   };
 
@@ -1370,6 +1533,10 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
   const shuffledGrasslandOrganisms = useMemo(() => [...grasslandOrganismPool].sort(() => Math.random() - 0.5), []);
 
   const toggleGrasslandOrganism = (id: string) => {
+    const org = grasslandOrganismPool.find(o => o.id === id);
+    if (org) {
+      onScore?.(`grassland_org_${id}`, org.isGrassland);
+    }
     setSelectedGrasslandOrganisms(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
@@ -1393,8 +1560,10 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
         <p className="mb-4">
           草原生態系的年雨量介於
           <FillInTheBlank 
-            options={['森林與沙漠', '凍原與森林', '海洋與河流']} 
+            options={['凍原與森林', '森林與沙漠', '海洋與河流']} 
             correct="森林與沙漠" 
+            qid="grassland_blank_1"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 1: true }))}
           />
           之間，水分不足以支持森林生長。
@@ -1402,8 +1571,10 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
         <p className="mb-4">
           這裡的植物以
           <FillInTheBlank 
-            options={['草本植物', '高大喬木', '地衣苔蘚']} 
+            options={['高大喬木', '草本植物', '地衣苔蘚']} 
             correct="草本植物" 
+            qid="grassland_blank_2"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 2: true }))}
           />
           為主，景觀開闊。
@@ -1411,8 +1582,10 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
         <p className="mb-4">
           由於缺乏隱蔽處，動物多具備
           <FillInTheBlank 
-            options={['善於奔跑', '擅長攀爬', '體積巨大']} 
+            options={['擅長攀爬', '善於奔跑', '體積巨大']} 
             correct="善於奔跑" 
+            qid="grassland_blank_3"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 3: true }))}
           />
           或穴居的特性。
@@ -1420,8 +1593,10 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
         <p>
           代表性生物包含
           <FillInTheBlank 
-            options={['斑馬、獅子', '北極狐、馴鹿', '松鼠、樹懶']} 
+            options={['松鼠、樹懶', '斑馬、獅子', '北極狐、馴鹿']} 
             correct="斑馬、獅子" 
+            qid="grassland_blank_4"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 4: true }))}
           />
           、土撥鼠、蝗蟲等。
@@ -2023,6 +2198,10 @@ function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScor
   ];
 
   const handleRemove = (name: string) => {
+    const org = organisms.find(o => o.name === name);
+    if (org) {
+      onScore?.(`desert_remove_${name}`, !org.desert);
+    }
     setRemoved(prev => [...prev, name]);
   };
 
@@ -2052,6 +2231,10 @@ function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScor
   ];
 
   const toggleTrait = (id: string) => {
+    const trait = traitOptions.find(t => t.id === id);
+    if (trait) {
+      onScore?.(`desert_trait_${id}`, trait.correct);
+    }
     setSelectedTraits(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
@@ -2330,7 +2513,7 @@ function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScor
 function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [selectedFreshwaterOrganisms, setSelectedFreshwaterOrganisms] = useState<string[]>([]);
-  const [velocity, setVelocity] = useState('slow');
+  const [riverType, setRiverType] = useState<'upstream' | 'downstream'>('upstream');
 
   const freshwaterOrganismPool = [
     { id: 'carp', name: '草魚', img: './assets/草魚.jpg', isFreshwater: true },
@@ -2362,10 +2545,63 @@ function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, on
 
   const isCorrectBlanks = Object.keys(blanks).length === 2;
 
+  const riverData = {
+    upstream: {
+      flow: "湍急",
+      oxygen: "溶氧量高 (水面快速翻動)",
+      temp: "低",
+      bottom: "主要為大岩石或礫石",
+      traits: "生物具流線型、吸盤或附著功能，避免被沖走。",
+      examples: "溪哥、苔蘚、吸口鰍"
+    },
+    downstream: {
+      flow: "緩慢",
+      oxygen: "溶氧量較低",
+      temp: "較高",
+      bottom: "主要為泥沙堆積",
+      traits: "底棲挖掘生物、浮游生物較多。",
+      examples: "草魚、螺類、水蚤"
+    }
+  };
+
+  const [riverMatching, setRiverMatching] = useState<Record<string, 'upstream' | 'downstream' | null>>({});
+  const [riverSubmitted, setRiverSubmitted] = useState(false);
+  const [tableAnswers, setTableAnswers] = useState<Record<string, string>>({});
+  
+  const handleTableSelect = (id: string, value: string, correct: string) => {
+    setTableAnswers(prev => ({ ...prev, [id]: value }));
+    if (value === correct) {
+      onScore?.(`river_table_${id}`, true);
+    }
+  };
+  
+  const riverQuizItems = [
+    { id: 'suction', text: '具備吸盤或附著構造，能固定在岩石上', correct: 'upstream', hint: '提示：上游水流湍急，生物需要「抓得住」岩石。' },
+    { id: 'streamline', text: '身體呈流線型，泳力強，不怕激流', correct: 'upstream', hint: '提示：上游水流快，流線型能減少阻力。' },
+    { id: 'bottom_dweller', text: '多為底棲挖掘生物，生活在泥沙環境', correct: 'downstream', hint: '提示：下游水流慢，泥沙堆積，適合挖掘。' },
+    { id: 'plankton', text: '含有較多浮游生物，水流緩慢有利繁殖', correct: 'downstream', hint: '提示：下游水流緩慢，浮游生物不會被輕易沖走。' },
+  ];
+
+  const handleRiverMatch = (id: string, type: 'upstream' | 'downstream') => {
+    if (riverSubmitted) return;
+    setRiverMatching(prev => ({ ...prev, [id]: type }));
+  };
+
+  const handleSubmitRiverQuiz = () => {
+    setRiverSubmitted(true);
+    riverQuizItems.forEach(item => {
+      const selection = riverMatching[item.id];
+      if (selection) {
+        onScore?.(`river_match_${item.id}`, selection === item.correct);
+      }
+    });
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader title="淡水生態系" icon={<Droplets />} color="text-cyan-500" />
       
+      {/* Introduction */}
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm leading-relaxed text-lg">
         <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-cyan-700">
           <Info size={20} /> 淡水環境：流動與靜止
@@ -2394,60 +2630,262 @@ function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, on
         </p>
       </div>
 
+      {/* River Upstream/Downstream Section */}
       <div className="bg-cyan-50 p-8 rounded-3xl border border-cyan-100">
         <h3 className="text-xl font-bold mb-6 text-cyan-800 flex items-center gap-2">
-           <Waves className="text-cyan-500" /> 環境模擬：水流速度與溶氧
+           <Waves className="text-cyan-500" /> 河流環境比較：上游與下游
         </h3>
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-           <div className="space-y-4">
-              <div className="flex gap-2">
-                 {['slow', 'fast'].map(v => (
-                    <button 
-                      key={v}
-                      onClick={() => setVelocity(v)}
-                      className={cn(
-                        "flex-1 py-3 rounded-xl font-bold transition-all",
-                        velocity === v ? "bg-cyan-500 text-white shadow-lg" : "bg-white text-cyan-600 border border-cyan-100 hover:bg-cyan-100"
-                      )}
-                    >
-                      {v === 'slow' ? '靜止/緩流 (湖泊)' : '湍急流動 (溪流)'}
-                    </button>
-                 ))}
+        
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white rounded-2xl overflow-hidden shadow-sm">
+            <thead>
+              <tr className="bg-cyan-600 text-white">
+                <th className="p-4 text-left font-black">環境因子</th>
+                <th className="p-4 text-left font-black">河流上游</th>
+                <th className="p-4 text-left font-black">河流下游</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-cyan-50">
+              <tr>
+                <td className="p-4 font-bold text-slate-500 bg-slate-50/50">水流速度</td>
+                <td className="p-4">
+                  <select 
+                    value={tableAnswers['u_flow'] || ''} 
+                    onChange={(e) => handleTableSelect('u_flow', e.target.value, riverData.upstream.flow)}
+                    className={cn(
+                      "w-full p-2 rounded-lg border-2 font-bold transition-all",
+                      !tableAnswers['u_flow'] ? "border-slate-200" : (tableAnswers['u_flow'] === riverData.upstream.flow ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-400 bg-red-50 text-red-700")
+                    )}
+                  >
+                    <option value="">選擇...</option>
+                    <option value="湍急">湍急</option>
+                    <option value="緩慢">緩慢</option>
+                  </select>
+                </td>
+                <td className="p-4">
+                  <select 
+                    value={tableAnswers['d_flow'] || ''} 
+                    onChange={(e) => handleTableSelect('d_flow', e.target.value, riverData.downstream.flow)}
+                    className={cn(
+                      "w-full p-2 rounded-lg border-2 font-bold transition-all",
+                      !tableAnswers['d_flow'] ? "border-slate-200" : (tableAnswers['d_flow'] === riverData.downstream.flow ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-400 bg-red-50 text-red-700")
+                    )}
+                  >
+                    <option value="">選擇...</option>
+                    <option value="湍急">湍急</option>
+                    <option value="緩慢">緩慢</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td className="p-4 font-bold text-slate-500 bg-slate-50/50">溶氧含量</td>
+                <td className="p-4">
+                   <select 
+                    value={tableAnswers['u_oxy'] || ''} 
+                    onChange={(e) => handleTableSelect('u_oxy', e.target.value, riverData.upstream.oxygen)}
+                    className={cn(
+                      "w-full p-2 rounded-lg border-2 font-bold transition-all text-xs",
+                      !tableAnswers['u_oxy'] ? "border-slate-200" : (tableAnswers['u_oxy'] === riverData.upstream.oxygen ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-400 bg-red-50 text-red-700")
+                    )}
+                  >
+                    <option value="">選擇...</option>
+                    <option value="溶氧量高 (水面快速翻動)">高 (快速翻動)</option>
+                    <option value="溶氧量較低">較低</option>
+                  </select>
+                </td>
+                <td className="p-4">
+                   <select 
+                    value={tableAnswers['d_oxy'] || ''} 
+                    onChange={(e) => handleTableSelect('d_oxy', e.target.value, riverData.downstream.oxygen)}
+                    className={cn(
+                      "w-full p-2 rounded-lg border-2 font-bold transition-all text-xs",
+                      !tableAnswers['d_oxy'] ? "border-slate-200" : (tableAnswers['d_oxy'] === riverData.downstream.oxygen ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-400 bg-red-50 text-red-700")
+                    )}
+                  >
+                    <option value="">選擇...</option>
+                    <option value="溶氧量高 (水面快速翻動)">高 (快速翻動)</option>
+                    <option value="溶氧量較低">較低</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td className="p-4 font-bold text-slate-500 bg-slate-50/50">河床底質</td>
+                <td className="p-4 text-cyan-700 font-bold">{riverData.upstream.bottom}</td>
+                <td className="p-4 text-cyan-600">{riverData.downstream.bottom}</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-bold text-slate-500 bg-slate-50/50">水溫環境</td>
+                <td className="p-4 text-cyan-700 font-bold">{riverData.upstream.temp}</td>
+                <td className="p-4 text-cyan-600">{riverData.downstream.temp}</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-bold text-slate-500 bg-slate-50/50">常見生物</td>
+                <td className="p-4 text-cyan-700 font-bold text-sm italic">{riverData.upstream.examples}</td>
+                <td className="p-4 text-cyan-600 text-sm italic">{riverData.downstream.examples}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          <h4 className="font-black text-cyan-800 flex items-center gap-2">
+            <Zap size={18} /> 生物適應挑戰：請將生物特徵配對到正確區域
+          </h4>
+          <div className="grid gap-3">
+            {riverQuizItems.map(item => (
+              <div key={item.id} className="bg-white p-4 rounded-xl border border-cyan-100 flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <p className="font-bold text-slate-700">{item.text}</p>
+                  <div className="flex gap-2">
+                    {(['upstream', 'downstream'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => handleRiverMatch(item.id, type)}
+                        disabled={riverSubmitted}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-black transition-all",
+                          riverMatching[item.id] === type
+                            ? (riverSubmitted 
+                                ? (item.correct === type ? "bg-emerald-500 text-white" : "bg-red-500 text-white")
+                                : "bg-cyan-500 text-white shadow-md")
+                            : "bg-slate-100 text-slate-500 hover:bg-cyan-100 hover:text-cyan-600 disabled:hover:bg-slate-100 disabled:hover:text-slate-500"
+                        )}
+                      >
+                        {type === 'upstream' ? '上游生物' : '下游生物'}
+                        {riverSubmitted && riverMatching[item.id] === type && (
+                          <span className="ml-2">
+                            {item.correct === type ? '✓' : '✗'}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {riverSubmitted && riverMatching[item.id] !== item.correct && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-bold"
+                  >
+                    {item.hint}
+                  </motion.div>
+                )}
               </div>
-              <div className="bg-white p-4 rounded-xl border border-cyan-100">
-                 <p className="text-sm text-slate-600">
-                    {velocity === 'slow' 
-                      ? "水面平靜，溶氧量較低，適合如浮萍、睡蓮等植物生長。" 
-                      : "水流湍急，與大氣接觸面大，溶氧量極高，生物多需具備抓握或流線型身體。"}
-                 </p>
-              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex justify-center">
+             <button
+               onClick={handleSubmitRiverQuiz}
+               disabled={riverSubmitted || Object.keys(riverMatching).length < riverQuizItems.length}
+               className={cn(
+                 "px-12 py-4 rounded-2xl font-black text-xl shadow-xl transition-all flex items-center gap-3",
+                 riverSubmitted 
+                   ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                   : "bg-cyan-600 text-white hover:bg-cyan-700 hover:scale-105 active:scale-95"
+               )}
+             >
+               {riverSubmitted ? '評分完成' : '送出生物挑戰'}
+               {!riverSubmitted && <ArrowRight />}
+             </button>
+             
+             {riverSubmitted && (
+               <button
+                 onClick={() => {
+                   setRiverSubmitted(false);
+                   setRiverMatching({});
+                 }}
+                 className="ml-4 px-6 py-4 rounded-2xl font-bold bg-white border-2 border-cyan-100 text-cyan-600 hover:bg-cyan-50 transition-all"
+               >
+                 重新挑戰
+               </button>
+             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Lake Ecosystem Schematic Section */}
+      <div className="bg-emerald-50 p-8 rounded-3xl border border-emerald-100 overflow-hidden relative">
+        <h3 className="text-xl font-bold mb-8 text-emerald-800 flex items-center gap-2">
+           <Sun className="text-amber-500" /> 湖泊生態：分層與生產者
+        </h3>
+        
+        <div className="relative aspect-[16/9] w-full max-w-4xl mx-auto border-4 border-white shadow-2xl rounded-[2.5rem] bg-gradient-to-b from-sky-200 via-sky-400 to-blue-900 overflow-hidden group">
+          {/* Surface */}
+          <div className="absolute top-[25%] left-0 right-0 h-[2px] bg-white/40 z-20" />
+          
+          {/* Shore Plants */}
+          <div className="absolute top-[10%] left-[-2%] bottom-[60%] w-[15%] z-30">
+             <div className="flex flex-col items-center justify-end h-full gap-1">
+                <div className="w-1 h-32 bg-emerald-600 rounded-full" />
+                <div className="w-1 h-24 bg-emerald-500 rounded-full translate-x-2" />
+                <p className="text-[10px] font-black bg-white rounded-full px-2 py-0.5 shadow-sm text-emerald-600 border border-emerald-200">岸邊植物</p>
+             </div>
+          </div>
+          <div className="absolute top-[10%] right-[-2%] bottom-[60%] w-[15%] z-30">
+             <div className="flex flex-col items-center justify-end h-full gap-1">
+                <div className="w-1 h-40 bg-emerald-600 rounded-full" />
+                <div className="w-1 h-28 bg-emerald-500 rounded-full -translate-x-2" />
+                <p className="text-[10px] font-black bg-white rounded-full px-2 py-0.5 shadow-sm text-emerald-600 border border-emerald-200 text-center">水生高等植物</p>
+             </div>
+          </div>
+
+          {/* Sun Rays (Photic Zone) */}
+          <div className="absolute top-0 inset-x-0 h-[60%] bg-white/10 [mask-image:linear-gradient(to_bottom,white,transparent)] z-10" />
+
+          {/* Producers - Algae in water */}
+          <div className="absolute top-[35%] left-[30%] z-20">
+             <motion.div animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="p-1 bg-white/80 rounded-lg shadow-sm border border-emerald-200">
+                <p className="text-[9px] font-bold text-emerald-700">浮游藻類</p>
+             </motion.div>
+          </div>
+          <div className="absolute top-[45%] right-[25%] z-20">
+             <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="p-1 bg-white/80 rounded-lg shadow-sm border border-emerald-200">
+                <p className="text-[9px] font-bold text-emerald-700">水草 / 沉水植物</p>
+             </motion.div>
+          </div>
+
+          {/* Zone Labels */}
+          <div className="absolute top-[40%] left-4 z-40 border-l-2 border-dashed border-white/50 pl-2">
+             <p className="text-white text-xs font-black drop-shadow-md">透光區 (Euphotic Zone)</p>
+             <p className="text-white/70 text-[9px]">生產者聚集，行光合作用</p>
+          </div>
+          <div className="absolute bottom-[15%] left-4 z-40 border-l-2 border-dashed border-white/30 pl-2">
+             <p className="text-slate-200 text-xs font-black drop-shadow-md opacity-60">不透光區 / 深水區 (Aphotic Zone)</p>
+             <p className="text-slate-400 text-[9px] opacity-60">缺乏陽光，生產者極少</p>
+          </div>
+
+          {/* Organisms (Lake dwellers) */}
+          <div className="absolute top-[45%] left-[50%] z-20">
+             <motion.div animate={{ x: [-10, 10, -10] }} transition={{ repeat: Infinity, duration: 5 }}>
+                <Bird size={24} className="text-white opacity-40" />
+             </motion.div>
+          </div>
+
+          {/* Bottom Mud */}
+          <div className="absolute bottom-0 inset-x-0 h-[10%] bg-slate-900/40 blur-sm" />
+        </div>
+
+        <div className="mt-8 grid md:grid-cols-3 gap-4">
+           <div className="bg-white p-4 rounded-2xl border border-emerald-100">
+              <h4 className="font-black text-emerald-700 text-sm mb-2">🌱 岸邊與淺水</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">生長大型水生植物（如蘆葦、睡蓮），提供生物棲息與產卵空間。</p>
            </div>
-           <div className="relative h-40 bg-white rounded-2xl overflow-hidden border border-cyan-100 flex items-center justify-center">
-              {velocity === 'fast' ? (
-                <div className="flex gap-4">
-                   {[1, 2, 3].map(i => (
-                     <motion.div 
-                       key={i}
-                       animate={{ x: [-10, 10, -10], y: [0, -20, 0], opacity: [0, 1, 0] }}
-                       transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.2 }}
-                       className="w-4 h-4 bg-cyan-100 rounded-full"
-                    />
-                   ))}
-                   <p className="text-cyan-500 font-black animate-pulse">湍急水流 O₂↑↑</p>
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                   <div className="w-20 h-1 bg-cyan-200 rounded-full mx-auto" />
-                   <p className="text-cyan-300 font-bold">平靜水面 O₂→</p>
-                </div>
-              )}
+           <div className="bg-white p-4 rounded-2xl border border-emerald-100">
+              <h4 className="font-black text-emerald-700 text-sm mb-2">🌊 湖泊中央 (透光)</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">主要是微小的**浮游藻類**負責光合作用，支撐整個水域食物網。</p>
+           </div>
+           <div className="bg-white p-4 rounded-2xl border border-emerald-100">
+              <h4 className="font-black text-emerald-700 text-sm mb-2">🌑 深水不透光</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">陽光無法透達，植物難以生存。主要依賴上方掉落的**有機碎屑**為生。</p>
            </div>
         </div>
       </div>
 
+      {/* Organism Selection List */}
       <div className="bg-white p-8 rounded-3xl border border-slate-200">
         <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-cyan-800">
-           <Bird className="text-cyan-500" /> 生物多樣性：尋找淡水居民
+           <Bird className="text-cyan-500" /> 生物探勘：尋找淡水居民
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
            {shuffledFreshwaterOrganisms.map((org) => (
@@ -2580,6 +3018,8 @@ function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onSco
           <FillInTheBlank 
             options={['鹽度變化劇烈', '溫度恆定', '淡水流動']} 
             correct="鹽度變化劇烈" 
+            qid="estuary_blank_1"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 1: true }))}
           />
           ，是高度挑戰性的環境。
@@ -2589,6 +3029,8 @@ function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onSco
           <FillInTheBlank 
             options={['胎生苗', '針狀葉', '防風構造']} 
             correct="胎生苗" 
+            qid="estuary_blank_2"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 2: true }))}
           />
           ，避免幼苗被潮水沖走。
@@ -2598,6 +3040,8 @@ function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onSco
           <FillInTheBlank 
             options={['有機碎屑', '大型海草', '冰山碎片']} 
             correct="有機碎屑" 
+            qid="estuary_blank_3"
+            onScore={onScore}
             onCorrect={() => setBlanks(p => ({ ...p, 3: true }))}
           />
           ，吸引了多樣生物前來覓食及繁殖。
@@ -2909,7 +3353,7 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
   const getRegionInfo = () => {
     if (scrollDepth === 0) return { id: 'surface', label: '大洋區表面', desc: '海洋的最表層，與大氣直接接觸，陽光最充足。', color: 'text-sky-400' };
     if (scrollDepth <= 200) return { id: 'photic', label: '大洋區透光區', desc: '陽光可穿透的區域，生產者主要是浮游藻類，生物種類豐富。', color: 'text-blue-400' };
-    return { id: 'aphotic', label: '大洋區不透光區', desc: '陽光無法到達，完全黑暗且壓力大。生物需依賴上方落下的有機碎屑生存。', color: 'text-indigo-900' };
+    return { id: 'aphotic', label: '大洋區不透光區', desc: '陽光無法到達，完全黑暗且壓力大。生物需依賴上方下沉的生物屍體、糞便 or 有機碎片形成的「海雪」作為主食。', color: 'text-indigo-900' };
   };
 
   const getHorizontalInfo = () => {
@@ -2944,221 +3388,161 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
     <div className="space-y-16">
       <SectionHeader title="海洋生態系" icon={<Waves />} color="text-blue-500" />
 
-      {/* Horizontal Structure Exploration */}
+      {/* 1. 基本重點 (Basic Points) */}
+      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm leading-relaxed text-lg">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-700">
+          <Info size={20} /> 海洋環境概況
+        </h3>
+        <p className="mb-4">
+          海洋佔地球表面積約
+          <FillInTheBlank 
+            options={['70%', '50%', '90%']} 
+            correct="70%" 
+            qid="marine_blank_1"
+            onScore={onScore}
+            onCorrect={() => setBlanks(p => ({ ...p, 1: true }))}
+          />
+          ，是地球上最大的生態系。
+        </p>
+        <p className="mb-4">
+          海洋含有豐富的
+          <FillInTheBlank 
+            options={['鹽分', '淡水', '重金屬']} 
+            correct="鹽分" 
+            qid="marine_blank_2"
+            onScore={onScore}
+            onCorrect={() => setBlanks(p => ({ ...p, 2: true }))}
+          />
+          ，平均鹽度約為 3.5%。
+        </p>
+        <p className="mb-4">
+          海洋的透光區通常指水深
+          <FillInTheBlank 
+            options={['100', '200', '1000']} 
+            correct="200" 
+            qid="marine_blank_3"
+            onScore={onScore}
+            onCorrect={() => setBlanks(p => ({ ...p, 3: true }))}
+          />
+          公尺以內的區域。
+        </p>
+        <p>
+          在淺海區，水深 200m 以內的平緩地殼區稱為
+          <FillInTheBlank 
+            options={['大陸棚', '大陸坡', '海溝']} 
+            correct="大陸棚" 
+            qid="marine_blank_4"
+            onScore={onScore}
+            onCorrect={() => setBlanks(p => ({ ...p, 4: true }))}
+          />
+          。
+        </p>
+      </div>
+
+      {/* 2. 海洋水平結構 (水平探索) */}
       <div className="bg-white p-8 rounded-[3rem] border border-blue-100 shadow-xl overflow-hidden relative">
         <div className="mb-8">
            <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-             <Map className="text-blue-500" /> 海洋水平結構 (分區探索)
+             <Map className="text-blue-500" /> 海洋水平結構 (水平探索)
            </h3>
-           <p className="text-slate-500 mt-2">點擊拉桿或滾動，觀察潮間帶、淺海區與大洋區的劃分區別</p>
+           <p className="text-slate-500 mt-2">拖動下方拉桿，觀察潮間帶、淺海區與大洋區的劃分區別</p>
         </div>
 
-        <div className="relative h-64 bg-gradient-to-b from-sky-300 to-blue-500 rounded-3xl mb-12 shadow-inner overflow-hidden border-4 border-white/50">
-           {/* Visual Regions */}
-           <div className="absolute inset-0 flex">
-              <div className="h-full border-r-4 border-white/30 border-dashed" style={{ width: '20%' }} />
-              <div className="h-full border-r-4 border-white/30 border-dashed" style={{ width: '40%' }} />
-           </div>
+        <div className="relative h-80 rounded-3xl mb-12 shadow-inner overflow-hidden border-4 border-white/50 bg-blue-100">
+           {/* Background Image */}
+           <div 
+             className="absolute inset-0 bg-cover bg-bottom opacity-90 transition-opacity"
+             style={{ backgroundImage: `url('./assets/海洋地形圖.png')` }}
+           />
            
            {/* Marker Component */}
            <motion.div 
-             className="absolute bottom-4 left-0 z-20"
-             animate={{ x: `${horizontalDist}%` }}
+             className="absolute bottom-12 left-0 z-20"
+             animate={{ left: `${horizontalDist}%` }}
+             transition={{ type: 'spring', damping: 25, stiffness: 120 }}
              style={{ x: '-50%' }}
            >
-             <Ship size={40} className="text-white drop-shadow-lg" />
-             <div className="bg-white px-3 py-1 rounded-full text-xs font-black text-blue-600 mt-2 whitespace-nowrap shadow-xl">
-               距離海岸: {Math.round(horizontalDist)} km
+             <Ship size={50} className="text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" />
+             <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-black text-blue-600 mt-1 whitespace-nowrap shadow-xl border border-blue-100">
+               探索位置: {Math.round(horizontalDist)}%
              </div>
            </motion.div>
 
-           {/* Seabed Visualization */}
-           <svg className="absolute bottom-0 left-0 w-full h-32 text-blue-800/40 fill-current" preserveAspectRatio="none" viewBox="0 0 100 100">
-             <path d="M0,80 C10,82 20,85 30,90 C40,95 50,98 60,98 L100,100 L100,100 L0,100 Z" />
-           </svg>
-
-           {/* Interactive Overlay */}
-           <div 
-             className="absolute inset-0 cursor-ew-resize z-10"
-             onClick={(e) => {
-               const rect = e.currentTarget.getBoundingClientRect();
-               setHorizontalDist(((e.clientX - rect.left) / rect.width) * 100);
-             }}
-           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           <div className="space-y-4">
-              <div className={cn("p-6 rounded-[2rem] border-2 transition-all", horizontalDist < 20 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-100 opacity-50")}>
-                 <p className="text-xs font-black text-amber-600 uppercase tracking-tighter mb-1">區域 A</p>
-                 <h4 className="text-lg font-black text-slate-800">潮間帶</h4>
-                 <p className="text-sm text-slate-500">漲潮與退潮之間的區域，受波浪衝擊大，水分喪失劇烈。</p>
+           {/* Labels on Map */}
+           <div className="absolute inset-x-0 bottom-4 flex h-6 text-[10px] font-black text-white/80 pointer-events-none">
+              <div className="h-full flex items-center justify-center" style={{ width: '20%' }}>
+                 <span className="bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">潮間帶</span>
               </div>
-              <div className={cn("p-6 rounded-[2rem] border-2 transition-all", horizontalDist >= 20 && horizontalDist < 60 ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100 opacity-50")}>
-                 <p className="text-xs font-black text-emerald-600 uppercase tracking-tighter mb-1">區域 B</p>
-                 <h4 className="text-lg font-black text-slate-800">淺海區 (大陸棚)</h4>
-                 <p className="text-sm text-slate-500">水深 200m 內，陽光直達底部，生物多樣性極高。</p>
+              <div className="h-full flex items-center justify-center" style={{ width: '40%' }}>
+                 <span className="bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">淺海區 (大陸棚)</span>
               </div>
-              <div className={cn("p-6 rounded-[2rem] border-2 transition-all", horizontalDist >= 60 ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-100 opacity-50")}>
-                 <p className="text-xs font-black text-blue-600 uppercase tracking-tighter mb-1">區域 C</p>
-                 <h4 className="text-lg font-black text-slate-800">大洋區</h4>
-                 <p className="text-sm text-slate-500">遠離陸地，水深極深。分為透光帶與不透光帶。</p>
+              <div className="h-full flex items-center justify-center" style={{ width: '40%' }}>
+                 <span className="bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">大洋區</span>
               </div>
            </div>
-
-           <div className="md:col-span-2 space-y-6">
-              <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white">
-                 <h4 className="text-xl font-bold flex items-center gap-2 mb-4">
-                   <div className={cn("w-3 h-3 rounded-full animate-pulse bg-gradient-to-r", hRegion.color)} />
-                   當前定位：{hRegion.label}
-                 </h4>
-                 <p className="text-slate-400 mb-6">{hRegion.desc}</p>
-                 
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                       <p className="text-xs font-bold text-blue-400 mb-1">關鍵地形</p>
-                       <p className="text-sm">大陸棚 (水深 &lt; 200m)</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                       <p className="text-xs font-bold text-amber-400 mb-1">常見生物</p>
-                       <p className="text-sm">珊瑚礁、魚群、藻類</p>
-                    </div>
-                 </div>
-              </div>
-
-               <div className="grid grid-cols-1 gap-6">
-                 <div className="space-y-4">
-                   <p className="text-lg font-bold text-blue-800">海洋知識檢測</p>
-                   <div className="space-y-6">
-                      <div className="space-y-3">
-                         <p className="text-sm font-bold text-slate-700">1. 常見的大陸棚水深限值約為多少公尺？</p>
-                         <div className="flex gap-2">
-                           {['50', '200', '1000'].map(v => (
-                             <button 
-                                key={v}
-                                onClick={() => setMarineQuiz(p => ({ ...p, shelf: v }))}
-                                className={cn(
-                                  "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
-                                  marineQuiz.shelf === v ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-600 hover:border-blue-200"
-                                )}
-                             >
-                               {v}m
-                             </button>
-                           ))}
-                         </div>
-                      </div>
-
-                      <div className="space-y-3">
-                         <p className="text-sm font-bold text-slate-700">2. 根據光線穿透力，水深 0~200 公尺的垂直層稱為？</p>
-                         <div className="flex gap-2">
-                           {['大洋區透光區', '大洋區不透光區'].map(v => (
-                             <button 
-                                key={v}
-                                onClick={() => setMarineQuiz(p => ({ ...p, vertical: v }))}
-                                className={cn(
-                                  "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
-                                  marineQuiz.vertical === v ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-600 hover:border-blue-200"
-                                )}
-                             >
-                               {v}
-                             </button>
-                           ))}
-                         </div>
-                      </div>
-
-                      <div className="space-y-3">
-                         <p className="text-sm font-bold text-slate-700">3. 在海洋中，行光合作用者的垂直分佈深度極限約是？</p>
-                         <div className="flex gap-2">
-                           {['50', '200', '1000'].map(v => (
-                             <button 
-                                key={v}
-                                onClick={() => setMarineQuiz(p => ({ ...p, light: v }))}
-                                className={cn(
-                                  "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
-                                  marineQuiz.light === v ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-600 hover:border-blue-200"
-                                )}
-                             >
-                               {v} m
-                             </button>
-                           ))}
-                         </div>
-                      </div>
-
-                       <div className="space-y-3">
-                         <p className="text-sm font-bold text-slate-700">4. 淺海區底部平緩的地殼表面地形稱為？</p>
-                         <div className="flex gap-2">
-                           {['大陸棚', '深海溝', '中洋脊'].map(v => (
-                             <button 
-                                key={v}
-                                onClick={() => setMarineQuiz(p => ({ ...p, neritic: v }))}
-                                className={cn(
-                                  "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
-                                  marineQuiz.neritic === v ? "bg-blue-600 text-white border-blue-700" : "bg-white text-slate-600 hover:border-blue-200"
-                                )}
-                             >
-                               {v}
-                             </button>
-                           ))}
-                         </div>
-                      </div>
-                   </div>
-                 </div>
-               </div>
-           </div>
-        </div>
-      </div>
-
-      {/* Producer distribution challenge */}
-      <div className="bg-slate-900 p-8 rounded-[3rem] text-white space-y-8">
-        <div>
-           <h3 className="text-2xl font-bold flex items-center gap-2">
-             <Sun className="text-yellow-400" /> 生產者大挑戰：誰住在哪裡？
-           </h3>
-           <p className="text-slate-400 mt-2 text-sm italic">根據環境光照與地形，正確排列各種海洋生產者</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-           {['潮間帶', '淺海區', '大洋區上層', '大洋區下層'].map(zone => (
-             <div key={zone} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 space-y-4">
-                <p className="text-sm font-black text-blue-400">{zone}</p>
-                <div className="flex flex-col gap-2">
-                   {['大型藻類', '浮游藻類', '無生產者'].map(type => (
-                     <button
-                       key={type}
-                       onClick={() => handleProducerClick(zone, type)}
-                       className={cn(
-                         "py-2 px-4 rounded-xl text-xs font-bold transition-all border-2",
-                         producerQuiz[zone] === type
-                          ? "bg-blue-600 border-blue-400 text-white"
-                          : "bg-white/5 border-white/5 hover:border-white/20 text-slate-400"
-                       )}
-                     >
-                       {type}
-                     </button>
-                   ))}
-                </div>
-                {producerQuiz[zone] && (
-                  <div className={cn(
-                    "text-[10px] font-black text-center py-1 rounded-md",
-                    ((zone === '潮間帶' && producerQuiz[zone] === '大型藻類') ||
-                     (zone === '淺海區' && producerQuiz[zone] === '大型藻類') ||
-                     (zone === '大洋區上層' && producerQuiz[zone] === '浮游藻類') ||
-                     (zone === '大洋區下層' && producerQuiz[zone] === '無生產者')) 
-                      ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
-                  )}>
-                    {((zone === '潮間帶' && producerQuiz[zone] === '大型藻類') ||
-                     (zone === '淺海區' && producerQuiz[zone] === '大型藻類') ||
-                     (zone === '大洋區上層' && producerQuiz[zone] === '浮游藻類') ||
-                     (zone === '大洋區下層' && producerQuiz[zone] === '無生產者')) 
-                      ? "正確 ✓" : "再試試"}
-                  </div>
-                )}
+        {/* 1. Visible Slider Control */}
+        <div className="max-w-2xl mx-auto mb-12 px-8">
+           <div className="flex flex-col gap-2">
+             <div className="flex justify-between text-[10px] font-bold text-slate-400 px-1">
+                <span>海岸線</span>
+                <span>核心大洋</span>
              </div>
-           ))}
+             <div className="relative flex items-center gap-4 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+                <ArrowLeft className="text-blue-400" size={20} />
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={horizontalDist}
+                  onChange={(e) => setHorizontalDist(parseInt(e.target.value))}
+                  className="flex-1 h-3 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600 outline-none"
+                />
+                <ArrowRight className="text-blue-400" size={20} />
+             </div>
+           </div>
+        </div>
+
+        {/* 2. Horizontal Regions Layout A, B, C */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+           <div className={cn(
+             "p-6 rounded-[2rem] border-2 transition-all cursor-pointer", 
+             horizontalDist < 20 ? "bg-amber-50 border-amber-200 shadow-md scale-[1.02]" : "bg-white border-slate-100 opacity-60 grayscale-[0.5]"
+           )} onClick={() => setHorizontalDist(10)}>
+              <div className="flex items-center gap-2 mb-2">
+                 <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black">A</span>
+                 <h4 className="font-black text-slate-800">潮間帶</h4>
+              </div>
+              <p className="text-xs text-slate-500 leading-tight">漲潮與退潮之間的區域，環境變化極端，生物需克服缺水與波浪衝擊。</p>
+           </div>
+
+           <div className={cn(
+             "p-6 rounded-[2rem] border-2 transition-all cursor-pointer", 
+             horizontalDist >= 20 && horizontalDist < 60 ? "bg-emerald-50 border-emerald-200 shadow-md scale-[1.02]" : "bg-white border-slate-100 opacity-60 grayscale-[0.5]"
+           )} onClick={() => setHorizontalDist(40)}>
+              <div className="flex items-center gap-2 mb-2">
+                 <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black">B</span>
+                 <h4 className="font-black text-slate-800">淺海區 (大陸棚)</h4>
+              </div>
+              <p className="text-xs text-slate-500 leading-tight">水深 200m 內的大陸棚，陽光充足且多營養鹽，生物種類最豐富。</p>
+           </div>
+
+           <div className={cn(
+             "p-6 rounded-[2rem] border-2 transition-all cursor-pointer", 
+             horizontalDist >= 60 ? "bg-blue-50 border-blue-200 shadow-md scale-[1.02]" : "bg-white border-slate-100 opacity-60 grayscale-[0.5]"
+           )} onClick={() => setHorizontalDist(80)}>
+              <div className="flex items-center gap-2 mb-2">
+                 <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-black">C</span>
+                 <h4 className="font-black text-slate-800">大洋區</h4>
+              </div>
+              <p className="text-xs text-slate-500 leading-tight">遠離陸地、海床陡降的區域。分為上方透光區與深層黑暗區。</p>
+           </div>
         </div>
       </div>
 
-      {/* Vertical Interactive Zones */}
+      {/* 3. 海洋深度探索 (垂直分層) */}
       <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-200">
         <div className="mb-8">
            <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -3196,7 +3580,7 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
                         <Droplets size={12} className="text-indigo-400" /> 黑暗中的能量來源：海雪
                       </p>
                       <p className="text-[10px] text-indigo-600 leading-tight">
-                        在缺乏光合作用的深海，生物依賴上方下沉的生物屍體、糞便或有機碎片形成的「海雪」作為主食。
+                        在缺乏光合作用的深海，生物依賴上方下沉的生物屍體、糞便 or 有機碎片形成的「海雪」作為主食。
                       </p>
                       {!discoveredMarineSnow && (
                         <button 
@@ -3290,6 +3674,152 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
         </div>
       </div>
 
+      {/* 4. 海洋知識檢測 (Marine Knowledge Test) */}
+      <div className="bg-white p-8 rounded-[3rem] border border-blue-100 shadow-xl">
+         <h4 className="text-2xl font-bold text-blue-800 mb-6 flex items-center gap-2">
+            <CheckCircle2 className="text-blue-500" /> 海洋知識檢測
+         </h4>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+               <div className="space-y-3">
+                  <p className="text-md font-bold text-slate-700">1. 常見的大陸棚水深限值約為多少公尺？</p>
+                  <div className="flex gap-2">
+                    {['50', '200', '1000'].map(v => (
+                      <button 
+                         key={v}
+                         onClick={() => {
+                            setMarineQuiz(p => ({ ...p, shelf: v }));
+                            onScore?.('marine_quiz_shelf', v === '200');
+                         }}
+                         className={cn(
+                           "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
+                           marineQuiz.shelf === v ? "bg-blue-600 text-white border-blue-700 shadow-md" : "bg-white text-slate-600 hover:border-blue-200"
+                         )}
+                      >
+                        {v}m
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <p className="text-md font-bold text-slate-700">2. 根據光線穿透力，水深 0~200 公尺的垂直層稱為？</p>
+                  <div className="flex gap-2">
+                    {['大洋區透光區', '大洋區不透光區'].map(v => (
+                      <button 
+                         key={v}
+                         onClick={() => {
+                            setMarineQuiz(p => ({ ...p, vertical: v }));
+                            onScore?.('marine_quiz_vertical', v === '大洋區透光區');
+                         }}
+                         className={cn(
+                           "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
+                           marineQuiz.vertical === v ? "bg-blue-600 text-white border-blue-700 shadow-md" : "bg-white text-slate-600 hover:border-blue-200"
+                         )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-6">
+               <div className="space-y-3">
+                  <p className="text-md font-bold text-slate-700">3. 在海洋中，行光合作用者的垂直分佈深度極限約是？</p>
+                  <div className="flex gap-2">
+                    {['50', '200', '1000'].map(v => (
+                      <button 
+                         key={v}
+                         onClick={() => {
+                            setMarineQuiz(p => ({ ...p, light: v }));
+                            onScore?.('marine_quiz_light', v === '200');
+                         }}
+                         className={cn(
+                           "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
+                           marineQuiz.light === v ? "bg-blue-600 text-white border-blue-700 shadow-md" : "bg-white text-slate-600 hover:border-blue-200"
+                         )}
+                      >
+                        {v} m
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <p className="text-md font-bold text-slate-700">4. 淺海區底部平緩的地殼表面地形稱為？</p>
+                  <div className="flex gap-2">
+                    {['大陸棚', '深海溝', '中洋脊'].map(v => (
+                      <button 
+                         key={v}
+                         onClick={() => {
+                            setMarineQuiz(p => ({ ...p, neritic: v }));
+                            onScore?.('marine_quiz_neritic', v === '大陸棚');
+                         }}
+                         className={cn(
+                           "flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all",
+                           marineQuiz.neritic === v ? "bg-blue-600 text-white border-blue-700 shadow-md" : "bg-white text-slate-600 hover:border-blue-200"
+                         )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      {/* 5. 生產者大挑戰：誰住在哪裡？ */}
+      <div className="bg-slate-900 p-8 rounded-[3rem] text-white space-y-8">
+        <div>
+           <h3 className="text-2xl font-bold flex items-center gap-2">
+             <Sun className="text-yellow-400" /> 生產者大挑戰：誰住在哪裡？
+           </h3>
+           <p className="text-slate-400 mt-2 text-sm italic">根據環境光照與地形，正確排列各種海洋生產者</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+           {['潮間帶', '淺海區', '大洋區上層', '大洋區下層'].map(zone => (
+             <div key={zone} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 space-y-4">
+                <p className="text-sm font-black text-blue-400">{zone}</p>
+                <div className="flex flex-col gap-2">
+                   {['大型藻類', '浮游藻類', '無生產者'].map(type => (
+                     <button
+                       key={type}
+                       onClick={() => handleProducerClick(zone, type)}
+                       className={cn(
+                         "py-2 px-4 rounded-xl text-xs font-bold transition-all border-2",
+                         producerQuiz[zone] === type
+                          ? "bg-blue-600 border-blue-400 text-white"
+                          : "bg-white/5 border-white/5 hover:border-white/20 text-slate-400"
+                       )}
+                     >
+                       {type}
+                     </button>
+                   ))}
+                </div>
+                {producerQuiz[zone] && (
+                  <div className={cn(
+                    "text-[10px] font-black text-center py-1 rounded-md",
+                    ((zone === '潮間帶' && producerQuiz[zone] === '大型藻類') ||
+                     (zone === '淺海區' && producerQuiz[zone] === '大型藻類') ||
+                     (zone === '大洋區上層' && producerQuiz[zone] === '浮游藻類') ||
+                     (zone === '大洋區下層' && producerQuiz[zone] === '無生產者')) 
+                      ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                  )}>
+                    {((zone === '潮間帶' && producerQuiz[zone] === '大型藻類') ||
+                     (zone === '淺海區' && producerQuiz[zone] === '大型藻類') ||
+                     (zone === '大洋區上層' && producerQuiz[zone] === '浮游藻類') ||
+                     (zone === '大洋區下層' && producerQuiz[zone] === '無生產者')) 
+                      ? "正確 ✓" : "再試試"}
+                  </div>
+                )}
+             </div>
+           ))}
+        </div>
+      </div>
+
       {isBlanksDone && confirmedZones.length >= 3 && isQuizCorrect && isProducerCorrect && discoveredMarineSnow && <CompleteButton onClick={onComplete} />}
     </div>
   );
@@ -3326,9 +3856,6 @@ function ComparisonSection({ onComplete, onScore }: { onComplete: () => void, on
       <SectionHeader title="生態系超級比一比" icon={<BarChart2 />} color="text-purple-500" />
       
       <div className="bg-white p-8 rounded-3xl shadow-xl space-y-8 border border-slate-100">
-        <h3 className="text-xl font-bold flex items-center gap-2 text-purple-700">
-          <BarChart2 className="text-purple-500" /> 環境因子橫向對抗
-        </h3>
         <p className="text-sm text-slate-500 italic">只有搞清楚環境差異，才能成為真正的生態專家！</p>
         
         <div className="space-y-4">
@@ -3660,7 +4187,7 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
               {result.score >= 50 && (
                 <div className="mt-8 flex justify-center">
                    <button 
-                     onClick={onComplete}
+                     onClick={() => onComplete?.()}
                      className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg"
                    >
                      結業與領證 <Trophy size={18} />
