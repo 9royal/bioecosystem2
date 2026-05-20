@@ -1662,10 +1662,10 @@ function CreaturesSection({ onComplete, onScore }: { onComplete: () => void, onS
 
     if (val === current.ecosystem) {
       // Correct answer
-      onScore?.(`creature_${current.name}`, true);
       setCorrectCount(prev => prev + 1);
       const newQueue = quizQueue.slice(1);
       if (newQueue.length === 0) {
+        onScore?.('creatures_match', 200);
         setShowFinished(true);
       } else {
         setQuizQueue(newQueue);
@@ -1673,7 +1673,6 @@ function CreaturesSection({ onComplete, onScore }: { onComplete: () => void, onS
       setIsWrong(false);
     } else {
       // Wrong answer
-      onScore?.(`creature_${current.name}`, false);
       setIsWrong(true);
       setTimeout(() => setIsWrong(false), 1000);
       if (!wrongCreatures.includes(current.name)) {
@@ -1857,10 +1856,10 @@ function WaterCreaturesSection({ onComplete, onScore }: { onComplete: () => void
 
     if (val === current.ecosystem) {
       // Correct answer
-      onScore?.(`creature_w_${current.name}`, true);
       setCorrectCount(prev => prev + 1);
       const newQueue = quizQueue.slice(1);
       if (newQueue.length === 0) {
+        onScore?.('water_creatures_match', 200);
         setShowFinished(true);
       } else {
         setQuizQueue(newQueue);
@@ -1868,7 +1867,6 @@ function WaterCreaturesSection({ onComplete, onScore }: { onComplete: () => void
       setIsWrong(false);
     } else {
       // Wrong answer
-      onScore?.(`creature_w_${current.name}`, false);
       setIsWrong(true);
       setTimeout(() => setIsWrong(false), 1000);
       if (!wrongCreatures.includes(current.name)) {
@@ -3661,29 +3659,6 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
           )}
         </div>
       </div>
-
-      {/* Floating Score Display in Challenge Area */}
-      {result && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="fixed bottom-24 right-8 z-40"
-        >
-          <div className="bg-white/80 backdrop-blur shadow-xl border border-slate-200 p-4 rounded-2xl flex items-center gap-3">
-            <div className={cn(
-              "p-2 rounded-xl",
-              result.score >= 240 ? "bg-emerald-100 text-emerald-600" : 
-              result.score >= 180 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
-            )}>
-              <Zap size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-black text-slate-400 tracking-tighter">當前 AI 挑戰得分</p>
-              <p className="text-xl font-black text-slate-800">{result.score} / 300</p>
-            </div>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }
