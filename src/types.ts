@@ -12,7 +12,8 @@ export type EcosystemId =
   | 'water-creatures'
   | 'comparison' 
   | 'final'
-  | 'ai-challenge';
+  | 'ai-challenge'
+  | 'moving-challenge';
 
 export interface EcosystemTab {
   id: EcosystemId;
@@ -37,4 +38,5 @@ export const ECOSYSTEM_TABS: EcosystemTab[] = [
   { id: 'comparison', label: '挑戰', icon: 'BarChart2', color: 'bg-purple-500', locked: true },
   { id: 'final', label: '總評量', icon: 'Trophy', color: 'bg-yellow-500', locked: true },
   { id: 'ai-challenge', label: 'AI挑戰', icon: 'Zap', color: 'bg-indigo-500', locked: false },
+  { id: 'moving-challenge', label: '限時挑戰', icon: 'Zap', color: 'bg-red-500', locked: false },
 ];

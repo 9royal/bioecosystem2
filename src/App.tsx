@@ -12,13 +12,14 @@ import confetti from 'canvas-confetti';
 import { gradeAnswer } from './lib/gemini';
 import { cn } from './lib/utils';
 import { ECOSYSTEM_TABS, EcosystemId, EcosystemTab } from './types';
+import MovingChallengeGame from './components/MovingChallengeGame';
 
 // Components for different sections will be defined here or imported
 // For simplicity and coherence in this single-file request, I'll structure them within main components
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<EcosystemId>('home');
-  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(['home', 'overview', 'tundra', 'forest', 'grassland', 'desert', 'creatures', 'freshwater', 'estuary', 'marine', 'water-creatures', 'comparison', 'final', 'ai-challenge']);
+  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(['home', 'overview', 'tundra', 'forest', 'grassland', 'desert', 'creatures', 'freshwater', 'estuary', 'marine', 'water-creatures', 'comparison', 'final', 'ai-challenge', 'moving-challenge']);
   const [showUnlockAnim, setShowUnlockAnim] = useState<EcosystemId | null>(null);
 
   // Scoring System
@@ -26,9 +27,15 @@ export default function App() {
   const [scoredIds, setScoredIds] = useState<Set<string>>(new Set());
   const [attempts, setAttempts] = useState<Record<string, number>>({});
 
-  const handleScore = (questionId: string, isCorrect: boolean, componentAttempts?: number) => {
+  const handleScore = (questionId: string, isCorrect: boolean | number, componentAttempts?: number) => {
     if (scoredIds.has(questionId)) return;
     
+    if (typeof isCorrect === 'number') {
+      setExplorerScore(prev => prev + isCorrect);
+      setScoredIds(prev => new Set(prev).add(questionId));
+      return;
+    }
+
     if (isCorrect) {
       const finalAttempts = componentAttempts !== undefined ? (componentAttempts - 1) : (attempts[questionId] || 0);
       let points = 0;
@@ -215,7 +222,7 @@ function BackgroundWrapper({ children, bgImage }: { children: React.ReactNode, b
   );
 }
 
-function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, scoreHandler?: (qid: string, isOk: boolean, attempts?: number) => void) {
+function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, scoreHandler?: (qid: string, isOk: boolean | number, attempts?: number) => void) {
   switch (id) {
     case 'home': return <BackgroundWrapper><HomeSection onComplete={() => onComplete('home')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'overview': return <BackgroundWrapper><OverviewSection onComplete={() => onComplete('overview')} onScore={scoreHandler} /></BackgroundWrapper>;
@@ -231,12 +238,13 @@ function renderSection(id: EcosystemId, onComplete: (id: EcosystemId) => void, s
     case 'comparison': return <BackgroundWrapper><ComparisonSection onComplete={() => onComplete('comparison')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'final': return <BackgroundWrapper><FinalSection onComplete={() => onComplete('final')} onScore={scoreHandler} /></BackgroundWrapper>;
     case 'ai-challenge': return <BackgroundWrapper><AISummaryChallenge onComplete={() => onComplete('ai-challenge')} onScore={scoreHandler} /></BackgroundWrapper>;
+    case 'moving-challenge': return <BackgroundWrapper><MovingChallengeGame /></BackgroundWrapper>;
     default: return null;
   }
 }
 
 // 1. Home Section
-function HomeSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function HomeSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [quizDone, setQuizDone] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
 
@@ -330,7 +338,7 @@ function HomeSection({ onComplete, onScore }: { onComplete: () => void, onScore?
 }
 
 // 2. Overview Section
-function OverviewSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function OverviewSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [categorized, setCategorized] = useState<Record<string, 'land' | 'water' | null>>({});
   
   const ecosystems = [
@@ -468,7 +476,7 @@ function FillInTheBlank({
   correct: string, 
   onCorrect: () => void,
   qid?: string,
-  onScore?: (qid: string, ok: boolean) => void
+  onScore?: (qid: string, ok: boolean | number) => void
 }) {
   const [selected, setSelected] = useState('');
   const [isWrong, setIsWrong] = useState(false);
@@ -508,7 +516,7 @@ function FillInTheBlank({
 }
 
 // 3. Tundra Section
-function TundraSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function TundraSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [organismConfig, setOrganismConfig] = useState({
     fur: '薄',
@@ -796,7 +804,7 @@ function TundraSection({ onComplete, onScore }: { onComplete: () => void, onScor
   );
 }
 
-function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [rainfall, setRainfall] = useState(0);
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [traits, setTraits] = useState<Record<string, string>>({});
@@ -1274,7 +1282,7 @@ function ForestSection({ onComplete, onScore }: { onComplete: () => void, onScor
 }
 
 // 5. Grassland Section
-function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [population, setPopulation] = useState({
     grass: 1000,
@@ -1613,7 +1621,7 @@ function GrasslandSection({ onComplete, onScore }: { onComplete: () => void, onS
 
 
 // 6.5 Creatures Match Section
-function CreaturesSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function CreaturesSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const initialCreatures = useMemo(() => {
     const list = [
       // 凍原
@@ -1808,7 +1816,7 @@ function getHint(type: string) {
 }
 
 // 6.6 Water Creatures Match Section
-function WaterCreaturesSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function WaterCreaturesSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const initialCreatures = useMemo(() => {
     const list = [
       // 淡水河川
@@ -1988,7 +1996,7 @@ function WaterCreaturesSection({ onComplete, onScore }: { onComplete: () => void
   );
 }
 
-function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [removed, setRemoved] = useState<string[]>([]);
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
@@ -2309,7 +2317,7 @@ function DesertSection({ onComplete, onScore }: { onComplete: () => void, onScor
 }
 
 // 7. Freshwater Section
-function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [selectedFreshwaterOrganisms, setSelectedFreshwaterOrganisms] = useState<string[]>([]);
   const [velocity, setVelocity] = useState('slow');
@@ -2484,7 +2492,7 @@ function FreshwaterSection({ onComplete, onScore }: { onComplete: () => void, on
 }
 
 // 7.5 Estuary Section
-function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [placedChain, setPlacedChain] = useState<Record<string, string>>({});
   const [selectedEstuaryOrganisms, setSelectedEstuaryOrganisms] = useState<string[]>([]);
@@ -2868,7 +2876,7 @@ function EstuarySection({ onComplete, onScore }: { onComplete: () => void, onSco
 }
 
 // 8. Marine Section
-function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [scrollDepth, setScrollDepth] = useState(0);
   const [horizontalDist, setHorizontalDist] = useState(0);
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
@@ -3279,7 +3287,7 @@ function MarineSection({ onComplete, onScore }: { onComplete: () => void, onScor
 
 
 // 9. Comparison Section
-function ComparisonSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function ComparisonSection({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   
   const factors = [
@@ -3346,7 +3354,7 @@ function ComparisonSection({ onComplete, onScore }: { onComplete: () => void, on
   );
 }
 // 10. Final Assessment
-function FinalSection({ onComplete, onScore }: { onComplete?: () => void, onScore?: (qid: string, ok: boolean, attempts: number) => void }) {
+function FinalSection({ onComplete, onScore }: { onComplete?: () => void, onScore?: (qid: string, ok: boolean | number, attempts: number) => void }) {
   const [step, setStep] = useState(1);
   const [attempts, setAttempts] = useState<Record<number, number>>({});
   const [wrongChoices, setWrongChoices] = useState<string[]>([]);
@@ -3516,7 +3524,7 @@ function FinalSection({ onComplete, onScore }: { onComplete?: () => void, onScor
 }
 
 
-function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean, attempts?: number) => void }) {
+function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, onScore?: (qid: string, ok: boolean | number, attempts?: number) => void }) {
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<{ score: number, feedback: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3532,9 +3540,9 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
       
       setResult(data);
       setAttempts(prev => prev + 1);
-      onScore?.('ai_challenge', data.score >= 60, attempts + 1);
       
-      if (data.score >= 60) {
+      if (data.score >= 180) {
+        onScore?.('ai_challenge', data.score, attempts + 1);
         confetti({
           particleCount: 150,
           spread: 70,
@@ -3617,16 +3625,16 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "p-8 rounded-[2.5rem] border-4 shadow-2xl relative overflow-hidden",
-                result.score >= 80 ? "bg-emerald-50 border-emerald-500" : 
-                result.score >= 60 ? "bg-amber-50 border-amber-500" : "bg-red-50 border-red-500"
+                result.score >= 240 ? "bg-emerald-50 border-emerald-500" : 
+                result.score >= 180 ? "bg-amber-50 border-amber-500" : "bg-red-50 border-red-500"
               )}
             >
               <div className="flex items-start justify-between relative z-10">
                 <div>
                   <h4 className={cn(
                     "text-4xl font-black mb-2",
-                    result.score >= 80 ? "text-emerald-700" : 
-                    result.score >= 60 ? "text-amber-700" : "text-red-700"
+                    result.score >= 240 ? "text-emerald-700" : 
+                    result.score >= 180 ? "text-amber-700" : "text-red-700"
                   )}>
                     得分：{result.score}
                   </h4>
@@ -3636,10 +3644,10 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
                   </div>
                   <p className="text-slate-700 leading-relaxed font-bold italic">「{result.feedback}」</p>
                 </div>
-                {result.score >= 80 && <Trophy className="text-emerald-500 shrink-0" size={48} />}
+                {result.score >= 240 && <Trophy className="text-emerald-500 shrink-0" size={48} />}
               </div>
               
-              {result.score >= 60 && (
+              {result.score >= 180 && (
                 <div className="mt-8 flex justify-center">
                    <button 
                      onClick={onComplete}
@@ -3653,6 +3661,29 @@ function AISummaryChallenge({ onComplete, onScore }: { onComplete: () => void, o
           )}
         </div>
       </div>
+
+      {/* Floating Score Display in Challenge Area */}
+      {result && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="fixed bottom-24 right-8 z-40"
+        >
+          <div className="bg-white/80 backdrop-blur shadow-xl border border-slate-200 p-4 rounded-2xl flex items-center gap-3">
+            <div className={cn(
+              "p-2 rounded-xl",
+              result.score >= 240 ? "bg-emerald-100 text-emerald-600" : 
+              result.score >= 180 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
+            )}>
+              <Zap size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-black text-slate-400 tracking-tighter">當前 AI 挑戰得分</p>
+              <p className="text-xl font-black text-slate-800">{result.score} / 300</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
