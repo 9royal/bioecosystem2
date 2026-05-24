@@ -115,7 +115,10 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
     setIsSubmitting(true);
     setError(null);
     try {
-      const scriptURL = localStorage.getItem('GAS_DEPLOY_URL') || 'https://script.google.com/macros/s/AKfycbwPl8EhjWCkggj4vxNZcktgtDjwK9meeAVxDkxbnpC-S6Xl9aNAZrPWUiiH6ikqgwWSPg/exec';
+      const scriptURL = import.meta.env.VITE_GAS_DEPLOY_URL || localStorage.getItem('GAS_DEPLOY_URL') || '';
+      if (!scriptURL) {
+        throw new Error("尚未設定 Google Apps Script 部署網址（VITE_GAS_DEPLOY_URL）。請在 Vercel 環境變數或 LocalStorage 中設定此網址。");
+      }
       await fetch(scriptURL, {
         method: 'POST',
         mode: 'no-cors',
