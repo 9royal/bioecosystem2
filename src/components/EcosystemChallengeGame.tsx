@@ -45,6 +45,7 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
   
   const [classNum, setClassNum] = useState<number>(1);
   const [seatNum, setSeatNum] = useState<number>(1);
+  const [school, setSchool] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +128,7 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
           type: 'ecosystem',
           className: classNum,
           seatNumber: seatNum,
+          school: school,
           score: score
         })
       });
@@ -297,6 +299,18 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                      學校
+                    </label>
+                    <input 
+                      type="text"
+                      value={school}
+                      onChange={e => setSchool(e.target.value)}
+                      placeholder="東興（不用填國中）"
+                      className="w-full p-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-black outline-none focus:border-blue-500 placeholder:text-slate-300 text-sm h-12"
+                    />
                   </div>
                   <button
                     onClick={handleSubmit}

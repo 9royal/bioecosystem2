@@ -23,6 +23,7 @@ function doPost(e) {
     var type = data.type || "unknown"; // score (總評量), creature (生物挑戰), ecosystem (生態挑戰)
     var className = data.className || "";
     var seatNumber = data.seatNumber || "";
+    var school = data.school || "";
     var score = data.score !== undefined ? data.score : 0;
     
     // 依據挑戰類型決定寫入的分頁名稱
@@ -40,10 +41,10 @@ function doPost(e) {
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
       // 寫入首行表頭
-      sheet.appendRow(["提交時間", "班級", "座號", "分數"]);
+      sheet.appendRow(["提交時間", "班級", "座號", "學校", "分數"]);
       
       // 簡單的表頭美化（設定粗體）
-      sheet.getRange(1, 1, 1, 4).setFontWeight("bold");
+      sheet.getRange(1, 1, 1, 5).setFontWeight("bold");
     }
     
     // 新增一筆成績紀錄列
@@ -51,6 +52,7 @@ function doPost(e) {
       new Date(),   // 當前時間鍵值
       className,    // 班級
       seatNumber,   // 座號
+      school,       // 學校
       score         // 分數
     ]);
     

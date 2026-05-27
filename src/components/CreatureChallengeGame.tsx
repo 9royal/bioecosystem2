@@ -16,6 +16,7 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
   
   const [classNum, setClassNum] = useState<number>(1);
   const [seatNum, setSeatNum] = useState<number>(1);
+  const [school, setSchool] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +138,7 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
           type: 'creature',
           className: classNum,
           seatNumber: seatNum,
+          school: school,
           score: score
         })
       });
@@ -336,6 +338,18 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                      學校
+                    </label>
+                    <input 
+                      type="text"
+                      value={school}
+                      onChange={e => setSchool(e.target.value)}
+                      placeholder="東興（不用填國中）"
+                      className="w-full p-4 sm:p-5 rounded-2xl bg-slate-50 border-2 border-slate-100 font-black text-sm sm:text-lg outline-none focus:border-blue-500 placeholder:text-slate-300"
+                    />
                   </div>
                   <button
                     onClick={handleSubmit}

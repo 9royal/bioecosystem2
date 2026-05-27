@@ -520,6 +520,7 @@ function ScoreSubmissionSection({
 }) {
   const [className, setClassName] = useState<number>(1);
   const [seatNumber, setSeatNumber] = useState<number>(1);
+  const [school, setSchool] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -539,7 +540,7 @@ function ScoreSubmissionSection({
         );
       }
 
-      const response = await fetch(scriptURL, {
+      await fetch(scriptURL, {
         method: "POST",
         mode: "no-cors", // standard for GAS
         headers: { "Content-Type": "application/json" },
@@ -547,6 +548,7 @@ function ScoreSubmissionSection({
           type: "score",
           className,
           seatNumber,
+          school,
           score,
         }),
       });
@@ -643,6 +645,19 @@ function ScoreSubmissionSection({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-black text-slate-600 ml-2">
+              學校
+            </label>
+            <input
+              type="text"
+              value={school}
+              onChange={(e) => setSchool(e.target.value)}
+              placeholder="東興（不用填國中）"
+              className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-blue-500 outline-none font-bold placeholder:text-slate-300"
+            />
           </div>
 
           <button
@@ -3905,7 +3920,6 @@ function DesertSection({
   onComplete: () => void;
   onScore?: (qid: string, ok: boolean | number, attempts?: number) => void;
 }) {
-  const [removed, setRemoved] = useState<string[]>([]);
   const [blanks, setBlanks] = useState<Record<number, boolean>>({});
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [cactusData, setCactusData] = useState<
@@ -3917,6 +3931,16 @@ function DesertSection({
   const [desertSubmitted, setDesertSubmitted] = useState(false);
   const [desertAttempts, setDesertAttempts] = useState(0);
 
+  const [selectedTaskA, setSelectedTaskA] = useState<string[]>([]);
+  const [taskASubmitted, setTaskASubmitted] = useState(false);
+  const [taskAAttempts, setTaskAAttempts] = useState(0);
+
+  const [cactusSubmitted, setCactusSubmitted] = useState(false);
+  const [cactusAttempts, setCactusAttempts] = useState(0);
+
+  const [taskBSubmitted, setTaskBSubmitted] = useState(false);
+  const [taskBAttempts, setTaskBAttempts] = useState(0);
+
   const organisms = [
     { name: "仙人掌", desert: true },
     { name: "駱駝", desert: true },
@@ -3926,13 +3950,33 @@ function DesertSection({
     { name: "跳鼠", desert: true },
   ];
 
-  const handleRemove = (name: string) => {
-    const org = organisms.find((o) => o.name === name);
-    if (org) {
-      onScore?.(`desert_remove_${name}`, !org.desert);
-    }
-    setRemoved((prev) => [...prev, name]);
+  const toggleTaskA = (name: string) => {
+    if (taskASubmitted && isTaskACorrect) return;
+    setTaskASubmitted(false);
+    setSelectedTaskA((prev) =>
+      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name],
+    );
   };
+
+  const handleTaskASubmit = () => {
+    const nextAttempts = taskAAttempts + 1;
+    setTaskAAttempts(nextAttempts);
+    setTaskASubmitted(true);
+
+    organisms.forEach((o) => {
+      const isSelected = selectedTaskA.includes(o.name);
+      const isCorrect = isSelected === !o.desert;
+      onScore?.(`desert_remove_${o.name}`, isCorrect, nextAttempts);
+    });
+  };
+
+  const isTaskACorrect = useMemo(() => {
+    const correctNonDesert = organisms.filter((o) => !o.desert).map((o) => o.name);
+    const correctDesert = organisms.filter((o) => o.desert).map((o) => o.name);
+    const allNonDesertSelected = correctNonDesert.every((name) => selectedTaskA.includes(name));
+    const noDesertSelected = !correctDesert.some((name) => selectedTaskA.includes(name));
+    return allNonDesertSelected && noDesertSelected;
+  }, [selectedTaskA]);
 
   const cactusOptions = {
     root: {
@@ -3952,6 +3996,28 @@ function DesertSection({
     },
   };
 
+  const handleCactusSubmit = () => {
+    const nextAttempts = cactusAttempts + 1;
+    setCactusAttempts(nextAttempts);
+    setCactusSubmitted(true);
+
+    ["leaf", "stem", "root"].forEach((part) => {
+      const p = part as keyof typeof cactusOptions;
+      const fSelected = cactusData[part]?.feature;
+      const bSelected = cactusData[part]?.benefit;
+      onScore?.(
+        `desert_cactus_${part}_feature`,
+        fSelected === cactusOptions[p].correct.feature,
+        nextAttempts,
+      );
+      onScore?.(
+        `desert_cactus_${part}_benefit`,
+        bSelected === cactusOptions[p].correct.benefit,
+        nextAttempts,
+      );
+    });
+  };
+
   const traitOptions = [
     { id: "water_stem", label: "肥厚莖部儲水", correct: true },
     { id: "big_leaves", label: "廣大葉片蒸散", correct: false },
@@ -3960,19 +4026,25 @@ function DesertSection({
   ];
 
   const toggleTrait = (id: string) => {
-    const trait = traitOptions.find((t) => t.id === id);
-    if (trait) {
-      onScore?.(`desert_trait_${id}`, trait.correct);
-    }
+    if (taskBSubmitted && isCorrectTraits) return;
+    setTaskBSubmitted(false);
     setSelectedTraits((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
-  const remainingIncorrect = organisms.filter(
-    (o) => !o.desert && !removed.includes(o.name),
-  );
-  const isDoneRemoving = remainingIncorrect.length === 0;
+  const handleTaskBSubmit = () => {
+    const nextAttempts = taskBAttempts + 1;
+    setTaskBAttempts(nextAttempts);
+    setTaskBSubmitted(true);
+
+    traitOptions.forEach((t) => {
+      const isSelected = selectedTraits.includes(t.id);
+      const isCorrect = isSelected === t.correct;
+      onScore?.(`desert_trait_${t.id}`, isCorrect, nextAttempts);
+    });
+  };
+
   const isCorrectBlanks = Object.keys(blanks).length === 4;
   const isCorrectTraits =
     traitOptions
@@ -4215,17 +4287,15 @@ function DesertSection({
                   <div className="grid md:grid-cols-2 gap-2">
                     <select
                       value={cactusData[part]?.feature || ""}
+                      disabled={cactusSubmitted && isCactusCorrect}
                       className="text-xs p-2 bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-emerald-400 transition-colors"
                       onChange={(e) => {
                         const val = e.target.value;
-                        onScore?.(
-                          `desert_cactus_${part}_feature`,
-                          val === cactusOptions[p].correct.feature,
-                        );
                         setCactusData((prev) => ({
                           ...prev,
                           [part]: { ...prev[part], feature: val },
                         }));
+                        setCactusSubmitted(false);
                       }}
                     >
                       <option value="">選擇特徵...</option>
@@ -4237,17 +4307,15 @@ function DesertSection({
                     </select>
                     <select
                       value={cactusData[part]?.benefit || ""}
+                      disabled={cactusSubmitted && isCactusCorrect}
                       className="text-xs p-2 bg-slate-50 rounded-lg border border-slate-200 outline-none focus:border-emerald-400 transition-colors"
                       onChange={(e) => {
                         const val = e.target.value;
-                        onScore?.(
-                          `desert_cactus_${part}_benefit`,
-                          val === cactusOptions[p].correct.benefit,
-                        );
                         setCactusData((prev) => ({
                           ...prev,
                           [part]: { ...prev[part], benefit: val },
                         }));
+                        setCactusSubmitted(false);
                       }}
                     >
                       <option value="">選擇好處...</option>
@@ -4263,55 +4331,152 @@ function DesertSection({
             })}
           </div>
         </div>
+
+        {/* Submit button for Cactus Survival Code */}
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {!cactusSubmitted || !isCactusCorrect ? (
+            <button
+              onClick={handleCactusSubmit}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-8 rounded-xl text-sm shadow transition-all active:scale-95 flex items-center gap-2"
+            >
+              確認送出仙人掌生存密碼 🚀
+            </button>
+          ) : (
+            <div className="w-full p-3 bg-emerald-100 rounded-xl border border-emerald-300 flex items-center justify-center gap-2">
+              <Trophy size={16} className="text-emerald-600 animate-bounce" />
+              <span className="text-sm font-black text-emerald-800">仙人掌生存密碼解鎖成功！已計分 ✓</span>
+            </div>
+          )}
+          {cactusSubmitted && !isCactusCorrect && (
+            <p className="text-xs font-bold text-red-500 bg-red-50 border border-red-200 px-4 py-2 rounded-xl text-center">
+              特徵與好處配對不完全正確，再仔細思考看看喔！
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100">
-          <h4 className="font-bold flex items-center gap-2 mb-4 text-orange-900">
-            <AlertCircle size={20} /> 任務 A：清除外來者
-          </h4>
-          <p className="text-xs text-orange-700 mb-4 italic">
-            點擊「不適合」存活在沙漠中的生物：
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {organisms.map((o) => (
+        <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 flex flex-col justify-between">
+          <div>
+            <h4 className="font-bold flex items-center gap-2 mb-4 text-orange-900">
+              <AlertCircle size={20} /> 任務 A：清除外來者
+            </h4>
+            <p className="text-xs text-orange-700 mb-4 italic">
+              點擊標記出「不適合」存活在沙漠中的外來生物（需全部圈選出並送出）：
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {organisms.map((o) => {
+                const isSelected = selectedTaskA.includes(o.name);
+                let btnStyle = "bg-white text-slate-700 border-slate-200 hover:border-orange-300";
+                if (isSelected) {
+                  if (taskASubmitted) {
+                    btnStyle = !o.desert
+                      ? "bg-emerald-500 border-emerald-600 text-white font-bold"
+                      : "bg-red-500 border-red-600 text-white font-bold";
+                  } else {
+                    btnStyle = "bg-orange-500 border-orange-600 text-white font-bold";
+                  }
+                } else if (taskASubmitted && !o.desert) {
+                  btnStyle = "border-amber-500 border-dashed text-amber-700 bg-amber-50";
+                }
+
+                return (
+                  <button
+                    key={o.name}
+                    disabled={taskASubmitted && isTaskACorrect}
+                    onClick={() => toggleTaskA(o.name)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl font-bold transition-all border-2 text-xs sm:text-sm",
+                      btnStyle,
+                    )}
+                  >
+                    {o.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center gap-2">
+            {!taskASubmitted || !isTaskACorrect ? (
               <button
-                key={o.name}
-                onClick={() => handleRemove(o.name)}
-                disabled={removed.includes(o.name)}
-                className={cn(
-                  "px-4 py-2 rounded-xl font-bold transition-all border-2",
-                  removed.includes(o.name)
-                    ? "bg-slate-100 text-slate-300 border-slate-100 opacity-30"
-                    : "bg-white text-orange-600 border-orange-100 hover:border-orange-500 shadow-sm",
-                )}
+                onClick={handleTaskASubmit}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-2.5 px-6 rounded-xl text-xs sm:text-sm shadow transition-all active:scale-95"
               >
-                {o.name}
+                確認送出任務 A 🚀
               </button>
-            ))}
+            ) : (
+              <div className="w-full p-2.5 bg-emerald-100 rounded-xl border border-emerald-300 flex items-center justify-center gap-1.5 text-emerald-800 font-bold text-xs">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <span>成功清除外來物種！已計分 ✓</span>
+              </div>
+            )}
+            {taskASubmitted && !isTaskACorrect && (
+              <p className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl text-center w-full">
+                標記錯誤或有遺漏，請重新檢查外來物種！
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="bg-orange-900 text-white p-6 rounded-3xl">
-          <h4 className="font-bold mb-4">任務 B：沙漠生存技能包</h4>
-          <p className="text-xs text-orange-200 mb-4">
-            選出正確的沙漠生物適應特徵：
-          </p>
-          <div className="space-y-2">
-            {traitOptions.map((t) => (
+        <div className="bg-orange-900 text-white p-6 rounded-3xl flex flex-col justify-between">
+          <div>
+            <h4 className="font-bold mb-4">任務 B：沙漠生存技能包</h4>
+            <p className="text-xs text-orange-200 mb-4">
+              選出正確的沙漠生物適應特徵（複選）：
+            </p>
+            <div className="space-y-2">
+              {traitOptions.map((t) => {
+                const isSelected = selectedTraits.includes(t.id);
+                let btnStyle = "bg-white/10 border-white/20 hover:bg-white/20 text-white";
+                if (isSelected) {
+                  if (taskBSubmitted) {
+                    btnStyle = t.correct
+                      ? "bg-emerald-600 border-emerald-500 text-white font-bold"
+                      : "bg-red-600 border-red-500 text-white font-bold";
+                  } else {
+                    btnStyle = "bg-orange-500 border-orange-400 text-white font-bold";
+                  }
+                } else if (taskBSubmitted && t.correct) {
+                  btnStyle = "border-dashed border-amber-400 text-amber-200 bg-amber-950/30";
+                }
+
+                return (
+                  <button
+                    key={t.id}
+                    disabled={taskBSubmitted && isCorrectTraits}
+                    onClick={() => toggleTrait(t.id)}
+                    className={cn(
+                      "w-full text-left px-4 py-2 rounded-xl text-xs sm:text-sm transition-all border",
+                      btnStyle,
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center gap-2">
+            {!taskBSubmitted || !isCorrectTraits ? (
               <button
-                key={t.id}
-                onClick={() => toggleTrait(t.id)}
-                className={cn(
-                  "w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all border",
-                  selectedTraits.includes(t.id)
-                    ? "bg-orange-500 border-orange-400 text-white"
-                    : "bg-white/10 border-white/20 hover:bg-white/20",
-                )}
+                onClick={handleTaskBSubmit}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-2.5 px-6 rounded-xl text-xs sm:text-sm shadow transition-all active:scale-95"
               >
-                {t.label}
+                確認送出任務 B 🚀
               </button>
-            ))}
+            ) : (
+              <div className="w-full p-2.5 bg-emerald-600 border border-emerald-500 rounded-xl flex items-center justify-center gap-1.5 text-white font-bold text-xs">
+                <CheckCircle2 size={16} className="text-white shrink-0" />
+                <span>技能特徵配對成功！已計分 ✓</span>
+              </div>
+            )}
+            {taskBSubmitted && !isCorrectTraits && (
+              <p className="text-[10px] font-bold text-red-200 bg-red-950/40 border border-red-900 px-3 py-1.5 rounded-xl text-center w-full">
+                生存特性不完全正確喔！再試著調整看看。
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -4469,9 +4634,12 @@ function DesertSection({
         </div>
       </div>
 
-      {isDoneRemoving &&
+      {taskASubmitted &&
+        isTaskACorrect &&
         isCorrectBlanks &&
+        taskBSubmitted &&
         isCorrectTraits &&
+        cactusSubmitted &&
         isCactusCorrect &&
         isDesertOrganismTaskCorrect && <CompleteButton onClick={onComplete} />}
     </div>
@@ -6280,46 +6448,121 @@ function EstuarySection({
           <Bird className="text-teal-500" /> 生物多樣性：尋找河口居民
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {shuffledEstuaryOrganisms.map((org) => (
-            <button
-              key={org.id}
-              onClick={() => toggleEstuaryOrganism(org.id)}
-              className={cn(
-                "group relative bg-slate-50 rounded-2xl overflow-hidden border-2 transition-all p-2 flex flex-col items-center gap-2",
-                selectedEstuaryOrganisms.includes(org.id)
-                  ? "border-teal-500 bg-teal-50 ring-2 ring-teal-500/20 shadow-md"
-                  : "border-slate-100 hover:border-teal-300 hover:bg-white",
-              )}
-            >
-              <div className="aspect-square w-full rounded-xl overflow-hidden">
-                <img
-                  src={org.img}
-                  alt={org.name}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = `https://placehold.co/200x200/f0fdfa/0d9488?text=${org.name}`;
-                  }}
-                />
-              </div>
-              <span
+          {shuffledEstuaryOrganisms.map((org) => {
+            const isSelected = selectedEstuaryOrganisms.includes(org.id);
+            let cardStyle =
+              "border-slate-100 hover:border-teal-300 hover:bg-white";
+
+            if (isSelected) {
+              if (estuaryOrganismsSubmitted) {
+                cardStyle = org.isEstuary
+                  ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20 shadow-md text-emerald-900"
+                  : "border-red-500 bg-red-50 ring-2 ring-red-500/20 shadow-md text-red-900";
+              } else {
+                cardStyle =
+                  "border-teal-500 bg-teal-50 ring-2 ring-teal-500/20 shadow-md";
+              }
+            } else if (estuaryOrganismsSubmitted && org.isEstuary) {
+              cardStyle = "border-amber-300 bg-amber-50/20 border-dashed";
+            }
+
+            return (
+              <button
+                key={org.id}
+                onClick={() => toggleEstuaryOrganism(org.id)}
                 className={cn(
-                  "text-sm font-bold",
-                  selectedEstuaryOrganisms.includes(org.id)
-                    ? "text-teal-700"
-                    : "text-slate-600",
+                  "group relative bg-slate-50 rounded-2xl overflow-hidden border-2 transition-all p-2 flex flex-col items-center gap-2",
+                  cardStyle,
                 )}
               >
-                {org.name}
-              </span>
-              {selectedEstuaryOrganisms.includes(org.id) && (
-                <div className="absolute top-3 right-3 bg-teal-500 text-white rounded-full p-0.5 shadow-lg">
-                  <CheckCircle2 size={16} />
+                <div className="aspect-square w-full rounded-xl overflow-hidden shadow-inner">
+                  <img
+                    src={org.img}
+                    alt={org.name}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://placehold.co/200x200/f0fdfa/0d9488?text=${org.name}`;
+                    }}
+                  />
                 </div>
-              )}
-            </button>
-          ))}
+                <span
+                  className={cn(
+                    "text-sm font-bold transition-colors",
+                    isSelected
+                      ? estuaryOrganismsSubmitted
+                        ? org.isEstuary
+                          ? "text-emerald-700"
+                          : "text-red-700"
+                        : "text-teal-700"
+                      : "text-slate-600",
+                  )}
+                >
+                  {org.name}
+                </span>
+
+                {isSelected && (
+                  <div
+                    className={cn(
+                      "absolute top-3 right-3 text-white rounded-full p-0.5 shadow-lg",
+                      estuaryOrganismsSubmitted
+                        ? org.isEstuary
+                          ? "bg-emerald-500"
+                          : "bg-red-500"
+                        : "bg-teal-500",
+                    )}
+                  >
+                    {estuaryOrganismsSubmitted && !org.isEstuary ? (
+                      <AlertCircle size={16} />
+                    ) : (
+                      <CheckCircle2 size={16} />
+                    )}
+                  </div>
+                )}
+                {estuaryOrganismsSubmitted && !isSelected && org.isEstuary && (
+                  <span className="absolute top-2 left-2 bg-amber-500 text-white rounded px-1 text-[8px] font-black animate-pulse">
+                    漏掉了！
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-4">
+          {selectedEstuaryOrganisms.length > 0 &&
+            (!estuaryOrganismsSubmitted || !isOrganismTaskCorrect) && (
+              <button
+                onClick={handleEstuaryOrganismsSubmit}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow transition-all shadow-teal-600/10 active:scale-95"
+              >
+                確認河口居民 🚀
+              </button>
+            )}
+
+          {estuaryOrganismsSubmitted && isOrganismTaskCorrect ? (
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex items-center gap-2 text-teal-600 font-bold bg-teal-50 px-6 py-3 rounded-full border border-teal-100"
+            >
+              <CheckCircle2 size={20} /> 河口生物辨識完成！已計分 ✓
+            </motion.div>
+          ) : (
+            estuaryOrganismsSubmitted &&
+            !isOrganismTaskCorrect && (
+              <div className="text-red-500 text-sm font-medium flex items-center gap-1.5 bg-red-50 border border-red-100 px-4 py-2 rounded-xl">
+                <AlertCircle size={16} />{" "}
+                這裡有些非河口生物喔，或者水筆仔、招潮蟹等代表生物漏掉了。再試試看！
+              </div>
+            )
+          )}
+          {!estuaryOrganismsSubmitted && selectedEstuaryOrganisms.length > 0 && (
+            <div className="text-slate-400 text-xs font-medium italic">
+              點擊「確認河口居民」按鈕送出計分。
+            </div>
+          )}
         </div>
       </div>
 
