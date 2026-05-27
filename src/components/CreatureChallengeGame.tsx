@@ -4,6 +4,7 @@ import { Trophy, Clock, Target, User, Users, RefreshCw, Send, Zap, Loader2, Chec
 import confetti from 'canvas-confetti';
 import { ORGANISMS, ECOSYSTEMS, Organism } from '../data/organisms';
 import { cn } from '../lib/utils';
+import Leaderboard from './Leaderboard';
 
 export default function CreatureChallengeGame({ onComplete, onScore }: { onComplete?: () => void, onScore?: (id: string, score: number) => void }) {
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
@@ -303,9 +304,12 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
               </div>
 
               {submitted ? (
-                <div className="bg-emerald-50 border-2 border-emerald-100 p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3rem] text-center space-y-4 w-full max-w-lg">
-                   <CheckCircle2 className="mx-auto text-emerald-500" size={64} />
-                   <p className="text-emerald-800 font-black text-2xl sm:text-3xl">成績已上傳至「生物挑戰」！</p>
+                <div className="flex flex-col items-center w-full max-w-lg space-y-4">
+                  <div className="bg-emerald-50 border-2 border-emerald-100 p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3rem] text-center space-y-4 w-full">
+                     <CheckCircle2 className="mx-auto text-emerald-500" size={64} />
+                     <p className="text-emerald-800 font-black text-2xl sm:text-3xl">成績已上傳至「生物挑戰」！</p>
+                  </div>
+                  <Leaderboard type="creature" currentScore={score} />
                 </div>
               ) : (
                 <div className="bg-white border border-slate-100 p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl w-full max-w-lg space-y-6 sm:space-y-8">

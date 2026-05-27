@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Clock, Target, User, Users, RefreshCw, Send, Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from '../lib/utils';
+import Leaderboard from './Leaderboard';
 
 const ECOSYSTEM_OPTIONS = [
   '針葉林', '落葉林', '闊葉林', '草原', '沙漠', '凍原', 
@@ -264,9 +265,12 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
               </div>
 
               {submitted ? (
-                <div className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-3xl text-center space-y-3 w-full max-w-md">
-                   <CheckCircle2 className="mx-auto text-emerald-500" size={48} />
-                   <p className="text-emerald-800 font-black text-xl">成績已上傳至「生態挑戰」！</p>
+                <div className="flex flex-col items-center w-full max-w-md space-y-4">
+                  <div className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-3xl text-center space-y-3 w-full">
+                     <CheckCircle2 className="mx-auto text-emerald-500" size={48} />
+                     <p className="text-emerald-800 font-black text-xl">成績已上傳至「生態挑戰」！</p>
+                  </div>
+                  <Leaderboard type="ecosystem" currentScore={score} />
                 </div>
               ) : (
                 <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-xl w-full max-w-md space-y-6">

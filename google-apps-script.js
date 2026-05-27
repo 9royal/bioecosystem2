@@ -71,6 +71,80 @@ function doPost(e) {
   }
 }
 
+function doGet(e) {
+  var header = ContentService.MimeType.JSON;
+  try {
+    var type = e.parameter.type || "score"; // score, creature, ecosystem
+    var sheetName = "學習紀錄表";
+    if (type === "score") {
+      sheetName = "總評量成績";
+    } else if (type === "creature") {
+      sheetName = "生物挑戰成績";
+    } else if (type === "ecosystem") {
+      sheetName = "生態挑戰成績";
+    }
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "data": []
+      })).setMimeType(header);
+    }
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "data": []
+      })).setMimeType(header);
+    }
+    
+    // 取得所有記錄（不含首行表頭）
+    var range = sheet.getRange(2, 1, lastRow - 1, 5);
+    var values = range.getValues();
+    
+    // 格式化資料
+    var records = [];
+    for (var i = 0; i < values.length; i++) {
+      var row = values[i];
+      var scoreVal = parseFloat(row[4]);
+      if (!isNaN(scoreVal)) {
+        records.push({
+          time: row[0],
+          className: row[1],
+          seatNumber: row[2],
+          school: row[3] || "未填寫",
+          score: scoreVal
+        });
+      }
+    }
+    
+    // 排序：分數由高到低，若相同則按時間由早到晚 (先達成的排前面)
+    records.sort(function(a, b) {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return new Date(a.time) - new Date(b.time);
+    });
+    
+    // 取得前 10 名
+    var top10 = records.slice(0, 10);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "success",
+      "data": top10
+    })).setMimeType(header);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "error",
+      "message": error.toString()
+    })).setMimeType(header);
+  }
+}
+
 /**
  * =========================================================================
  * 🛠️ 部署寫入 Google 試算表 (Google Apps Script) 操作步驟 🛠️
