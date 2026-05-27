@@ -60,9 +60,7 @@ import EcosystemChallengeGame from "./components/EcosystemChallengeGame";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<EcosystemId>("home");
-  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(
-    ECOSYSTEM_TABS.map((t) => t.id),
-  );
+  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(["home"]);
   const [showUnlockAnim, setShowUnlockAnim] = useState<EcosystemId | null>(
     null,
   );
