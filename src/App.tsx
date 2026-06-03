@@ -60,7 +60,10 @@ import EcosystemChallengeGame from "./components/EcosystemChallengeGame";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<EcosystemId>("home");
-  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>(["home"]);
+  const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>([
+    "home",
+    "submit"
+  ]);
   const [showUnlockAnim, setShowUnlockAnim] = useState<EcosystemId | null>(
     null,
   );
@@ -631,14 +634,14 @@ function ScoreSubmissionSection({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-black text-slate-600 ml-2">
-                座號 (1-30)
+                座號 (1-45)
               </label>
               <select
                 value={seatNumber}
                 onChange={(e) => setSeatNumber(Number(e.target.value))}
                 className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-blue-500 outline-none font-bold"
               >
-                {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
+                {Array.from({ length: 45 }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
                     {n} 號
                   </option>
@@ -843,21 +846,12 @@ function HomeSection({
         </div>
       </div>
 
-      {isQuizCorrect && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center"
-        >
-          <button
-            onClick={onComplete}
-            className="group flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-200 hover:-translate-y-1"
-          >
-            開始探索地圖{" "}
-            <ChevronRight className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </motion.div>
-      )}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isQuizCorrect}
+        incompleteTasks={!isQuizCorrect ? ["答對下方的「啟程挑戰」選擇題（共 3 題皆需答對）"] : []}
+        label="開始探索地圖"
+      />
     </div>
   );
 }
@@ -1121,7 +1115,11 @@ function OverviewSection({
         )}
       </div>
 
-      {isAllCorrect && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isAllCorrect}
+        incompleteTasks={!isAllCorrect ? ["將總共 7 個生態系正確分類為陸域生態系或水域生態系（需全對）"] : []}
+      />
     </div>
   );
 }
@@ -1803,9 +1801,17 @@ function TundraSection({
           </div>
         </div>
       </div>
-      {isCorrectBlanks && isSurvivalPassed && isAntarcticaCorrect && (
-        <CompleteButton onClick={onComplete} />
-      )}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isCorrectBlanks && isSurvivalPassed && isAntarcticaCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!isCorrectBlanks) tasks.push("完成凍原填空題（共 2 題）");
+          if (!isSurvivalPassed) tasks.push("啟動生存環境分析，且設定使生物存活率大於百分之 65");
+          if (!isAntarcticaCorrect) tasks.push("完成南北極生物與地理學特性配對（環境、生物等共 4 項配對全對）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -2823,11 +2829,19 @@ function ForestSection({
         </div>
       </div>
 
-      {isForest &&
-        isCorrectBlanks &&
-        isCorrectTraits &&
-        isTaiwanCorrect &&
-        isOrganismTaskCorrect && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isForest && isCorrectBlanks && isCorrectTraits && isTaiwanCorrect && isOrganismTaskCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!isForest) tasks.push("調整年雨量拉桿，使降雨量足夠形成「森林」生態系（需大於或等於 750 毫米）");
+          if (!isCorrectBlanks) tasks.push("完成森林生態系課文填空（共 4 題）");
+          if (!isCorrectTraits) tasks.push("完成針葉林、落葉林、闊葉林等三種森林類型特徵的配對（共 6 項）");
+          if (!isTaiwanCorrect) tasks.push("完成台灣山脈海拔及垂直分佈特徵配對（共 6 項）");
+          if (!isOrganismTaskCorrect) tasks.push("辨認並點選完所有森林生態系的代表生物並點擊確認（不能漏掉、不能包含外來者）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -3467,13 +3481,18 @@ function GrasslandSection({
           ></iframe>
         </div>
       </div>
-
-      {isBalanced &&
-        isChainCorrect &&
-        isCorrectBlanks &&
-        isGrasslandOrganismTaskCorrect && (
-          <CompleteButton onClick={onComplete} />
-        )}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isBalanced && isChainCorrect && isCorrectBlanks && isGrasslandOrganismTaskCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!isBalanced) tasks.push("調整草、斑馬、獅子的能量等級，符合 1/10 定律並啟動傳遞平衡模擬");
+          if (!isChainCorrect) tasks.push("正確排序並送出草、斑馬、獅子的食物鏈配對");
+          if (!isCorrectBlanks) tasks.push("完成草原填空題（共 4 題）");
+          if (!isGrasslandOrganismTaskCorrect) tasks.push("辨認並點選完所有草原代表生物並點擊確認（不能漏掉、不能包含外來者）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -3572,7 +3591,7 @@ function CreaturesSection({
           <p className="text-slate-600 mb-8">
             你已經成功掌握了陸域生態系中代表生物的居住地。
           </p>
-          <CompleteButton onClick={onComplete} />
+          <CompleteButton onClick={onComplete} isComplete={true} incompleteTasks={[]} />
         </div>
       </div>
     );
@@ -3677,6 +3696,12 @@ function CreaturesSection({
           )}
         </div>
       </div>
+
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={showFinished}
+        incompleteTasks={["完成所有陸域代表生物辨識配對（剩餘 " + quizQueue.length + " 隻生物）"]}
+      />
     </div>
   );
 }
@@ -3804,7 +3829,7 @@ function WaterCreaturesSection({
           <p className="text-slate-600 mb-8">
             你已經成功將這些水域生物歸位到更精確的生態系了。
           </p>
-          <CompleteButton onClick={onComplete} />
+          <CompleteButton onClick={onComplete} isComplete={true} incompleteTasks={[]} />
         </div>
       </div>
     );
@@ -3909,6 +3934,12 @@ function WaterCreaturesSection({
           )}
         </div>
       </div>
+
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={showFinished}
+        incompleteTasks={["完成所有水域代表生物辨識配對（剩餘 " + quizQueue.length + " 隻生物）"]}
+      />
     </div>
   );
 }
@@ -4634,14 +4665,19 @@ function DesertSection({
         </div>
       </div>
 
-      {taskASubmitted &&
-        isTaskACorrect &&
-        isCorrectBlanks &&
-        taskBSubmitted &&
-        isCorrectTraits &&
-        cactusSubmitted &&
-        isCactusCorrect &&
-        isDesertOrganismTaskCorrect && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={taskASubmitted && isTaskACorrect && isCorrectBlanks && taskBSubmitted && isCorrectTraits && cactusSubmitted && isCactusCorrect && isDesertOrganismTaskCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!taskASubmitted || !isTaskACorrect) tasks.push("完成沙漠特性配對任務 A（氣候與溫差特徵等配對全對）");
+          if (!isCorrectBlanks) tasks.push("完成沙漠生態系填空題（共 2 題）");
+          if (!taskBSubmitted || !isCorrectTraits) tasks.push("完成沙漠生物適應配對任務 B（防水與排除體內含氮廢物之適應配對全對）");
+          if (!cactusSubmitted || !isCactusCorrect) tasks.push("完成仙人掌葉與莖的特徵勾選並成功分析解剖特性");
+          if (!isDesertOrganismTaskCorrect) tasks.push("辨認並點選完所有沙漠代表生物並點擊確認（不能漏掉、不能包含外來者）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -5334,9 +5370,16 @@ function FreshwaterSection({
         </div>
       </div>
 
-      {isCorrectBlanks && isOrganismTaskCorrect && (
-        <CompleteButton onClick={onComplete} />
-      )}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isCorrectBlanks && isOrganismTaskCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!isCorrectBlanks) tasks.push("完成淡水生態系課文填空題（共 3 題）");
+          if (!isOrganismTaskCorrect) tasks.push("辨認並點選完所有淡水代表生物並點擊確認（不能漏掉、不能包含外來者、不能包含非淡水居民）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -5384,8 +5427,9 @@ function EstuarySection({
   ];
 
   const handleAdaptationScore = (key: string, val: string) => {
-    if (adaptationSubmitted) return;
+    if (adaptationSubmitted && isAdaptationCorrect) return;
     setAdaptationAnswers((p) => ({ ...p, [key]: val }));
+    setAdaptationSubmitted(false);
   };
 
   const handleAdaptationSubmit = () => {
@@ -5415,8 +5459,9 @@ function EstuarySection({
   ];
 
   const setEstuaryQuizAns = (key: string, val: string) => {
-    if (quizSubmitted) return;
+    if (quizSubmitted && isQuizCorrect) return;
     setQuizAnswers((p) => ({ ...p, [key]: val }));
+    setQuizSubmitted(false);
   };
 
   const handleQuizSubmit = () => {
@@ -5523,8 +5568,9 @@ function EstuarySection({
   }, [selectedEstuaryOrganisms, estuaryOrganismsSubmitted]);
 
   const handlePlaceInChain = (name: string, pos: string) => {
-    if (chainSubmitted) return;
+    if (chainSubmitted && isCorrectChain) return;
     setPlacedChain((p) => ({ ...p, [pos]: name }));
+    setChainSubmitted(false);
   };
 
   const handleChainSubmit = () => {
@@ -6608,11 +6654,19 @@ function EstuarySection({
         </div>
       </div>
 
-      {isCorrectBlanks &&
-        isCorrectChain &&
-        isOrganismTaskCorrect &&
-        isQuizCorrect &&
-        isAdaptationCorrect && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isCorrectBlanks && isCorrectChain && isOrganismTaskCorrect && isQuizCorrect && isAdaptationCorrect}
+        incompleteTasks={(() => {
+          const tasks = [];
+          if (!isCorrectBlanks) tasks.push("完成河口生態系填空題（共 3 題）");
+          if (!isCorrectChain) tasks.push("完成食物鏈『有機碎屑 -> 招潮蟹 -> 彈塗魚』的正確排序配對");
+          if (!isOrganismTaskCorrect) tasks.push("辨認並點選完所有河口生態系的代表生物並點點確認（不能漏掉、不能包含非河地生物或外來者）");
+          if (!isQuizCorrect) tasks.push("答對河口特性小遊戲選擇題中的所有題目（共 3 題選擇題需答對）");
+          if (!isAdaptationCorrect) tasks.push("完成水筆仔與招潮蟹等高鹽、泥灘地之適應特徵配對（共 6 項全配對對）");
+          return tasks;
+        })()}
+      />
     </div>
   );
 }
@@ -6856,6 +6910,22 @@ function MarineSection({
     producerQuiz["淺海區"] === "大型藻類" &&
     producerQuiz["大洋區上層"] === "浮游藻類" &&
     producerQuiz["大洋區下層"] === "無生產者";
+
+  const isMarineComplete =
+    isBlanksDone &&
+    confirmedZones.length >= 3 &&
+    confirmedHorizontalZones.length >= 3 &&
+    isQuizCorrect &&
+    isProducerCorrect &&
+    discoveredMarineSnow;
+
+  const marineIncompleteTasks: string[] = [];
+  if (!isBlanksDone) marineIncompleteTasks.push("完成海洋生態系填空題（共 3 題）");
+  if (confirmedZones.length <= 2) marineIncompleteTasks.push("理解並確實送出垂直分區特徵配對（潮間帶、淺海區、大洋區配對確認，每區皆需配對）");
+  if (confirmedHorizontalZones.length <= 2) marineIncompleteTasks.push("理解並確實配對並送出透光區與無光區的物理特徵配對（透光、無光、深海等 3 項特定配對）");
+  if (!isQuizCorrect) marineIncompleteTasks.push("答對海洋透光層及光線變化測驗的所有題目（共 3 題選擇題需答對）");
+  if (!isProducerCorrect) marineIncompleteTasks.push("完成浮游性藻類與底棲大型褐藻最大生存深度限制配對任務");
+  if (!discoveredMarineSnow) marineIncompleteTasks.push("派遣潛水艇探索深海世界，並成功偵測、發現「海洋雪 (Marine Snow)」");
 
   const confirmZone = () => {
     if (!confirmedZones.includes(region.id)) {
@@ -7717,12 +7787,11 @@ function MarineSection({
         </div>
       </div>
 
-      {isBlanksDone &&
-        confirmedZones.length >= 3 &&
-        confirmedHorizontalZones.length >= 3 &&
-        isQuizCorrect &&
-        isProducerCorrect &&
-        discoveredMarineSnow && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isMarineComplete}
+        incompleteTasks={marineIncompleteTasks}
+      />
     </div>
   );
 }
@@ -7923,7 +7992,11 @@ function ComparisonSection({
         )}
       </div>
 
-      {isAllCorrect && <CompleteButton onClick={onComplete} />}
+      <CompleteButton
+        onClick={onComplete}
+        isComplete={isAllCorrect}
+        incompleteTasks={!isAllCorrect ? ["將陸域及水域生態系的關鍵環境因子比較表格正確填寫並成功送出（全對）"] : []}
+      />
     </div>
   );
 }
@@ -8434,20 +8507,74 @@ function QuizItem({
   );
 }
 
-function CompleteButton({ onClick }: { onClick: () => void }) {
+interface CompleteButtonProps {
+  onClick: () => void;
+  isComplete: boolean;
+  incompleteTasks: string[];
+  label?: string;
+}
+
+function CompleteButton({ onClick, isComplete, incompleteTasks, label }: CompleteButtonProps) {
+  const [showWarning, setShowWarning] = useState(false);
+  const buttonText = label || "完成任務，解鎖下一區";
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="mt-12 flex justify-center"
-    >
-      <button
-        onClick={onClick}
-        className="group flex items-center gap-3 bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xl hover:bg-emerald-700 transition-all shadow-xl hover:shadow-emerald-200 hover:-translate-y-1"
+    <div className="mt-12 flex flex-col items-center gap-6 w-full">
+      <AnimatePresence>
+        {showWarning && !isComplete && incompleteTasks.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="w-full max-w-xl bg-orange-50 border-2 border-orange-200 rounded-3xl p-6 text-left shadow-lg scale-100 flex flex-col gap-3 relative overflow-hidden"
+          >
+            <div className="absolute top-2 right-2 opacity-5 pointer-events-none">
+              <AlertCircle size={100} className="text-orange-900" />
+            </div>
+            <div className="flex items-center gap-2.5 text-orange-850 font-black text-lg">
+              <AlertCircle size={22} className="text-orange-600 animate-bounce" />
+              <span>本區探索尚未完全通過喔！</span>
+            </div>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              請完成以下項目以解鎖下一個單元：
+            </p>
+            <ul className="space-y-2">
+              {incompleteTasks.map((task, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-slate-700 font-bold">
+                  <span className="text-orange-500 font-black mt-1">•</span>
+                  <span>{task}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex justify-center"
       >
-        完成任務，解鎖下一區{" "}
-        <ChevronRight className="group-hover:translate-x-1 transition-transform" />
-      </button>
-    </motion.div>
+        <button
+          onClick={() => {
+            if (isComplete) {
+              onClick();
+              setShowWarning(false);
+            } else {
+              setShowWarning(true);
+            }
+          }}
+          className={cn(
+            "group flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-xl transition-all shadow-xl hover:-translate-y-1 active:scale-95",
+            isComplete
+              ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-emerald-200"
+              : "bg-slate-300 text-slate-600 hover:bg-slate-400 hover:text-slate-800"
+          )}
+        >
+          {buttonText}{" "}
+          <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+        </button>
+      </motion.div>
+    </div>
   );
 }

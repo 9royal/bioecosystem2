@@ -15,6 +15,9 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
   const [spawnKey, setSpawnKey] = useState(0); 
   const [questionTimeLeft, setQuestionTimeLeft] = useState(5);
   
+  const [questionAttempts, setQuestionAttempts] = useState(0);
+  const [incorrectSelections, setIncorrectSelections] = useState<string[]>([]);
+
   const [classNum, setClassNum] = useState<number>(1);
   const [seatNum, setSeatNum] = useState<number>(1);
   const [school, setSchool] = useState<string>("");
@@ -71,6 +74,8 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
   const startGame = () => {
     setScore(0);
     setTimeLeft(60);
+    setQuestionAttempts(0);
+    setIncorrectSelections([]);
     setSubmitted(false);
     setError(null);
     setGameState('playing');
@@ -86,6 +91,8 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
   const spawnOrganism = () => {
     const randomIndex = Math.floor(Math.random() * ORGANISMS.length);
     setCurrentOrganism(ORGANISMS[randomIndex]);
+    setQuestionAttempts(0);
+    setIncorrectSelections([]);
     setSpawnKey(prev => prev + 1);
     spawnTimeRef.current = Date.now();
   };
@@ -102,25 +109,53 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
 
   const handleAnswer = (ecosystem: string) => {
     if (!currentOrganism || gameState !== 'playing') return;
-    
-    if (qTimerRef.current) clearInterval(qTimerRef.current);
+    if (incorrectSelections.includes(ecosystem)) return;
+
+    const nextAttempts = questionAttempts + 1;
+    setQuestionAttempts(nextAttempts);
 
     const isCorrect = ecosystem === currentOrganism.ecosystem;
     if (isCorrect) {
-      const timeTaken = (Date.now() - spawnTimeRef.current) / 1000;
-      const speedBonus = Math.max(0, Math.floor(1350 * (1 - timeTaken / 5)));
-      const pointsEarned = 150 + speedBonus;
+      if (qTimerRef.current) clearInterval(qTimerRef.current);
+
+      let pointsEarned = 0;
+      if (nextAttempts === 1) {
+        const timeTaken = (Date.now() - spawnTimeRef.current) / 1000;
+        const speedBonus = Math.max(0, Math.floor(1350 * (1 - timeTaken / 5)));
+        pointsEarned = 150 + speedBonus;
+      } else if (nextAttempts === 2) {
+        pointsEarned = 100;
+      } else if (nextAttempts === 3) {
+        pointsEarned = 50;
+      } else {
+        pointsEarned = 0;
+      }
+
       setScore(prev => prev + pointsEarned);
       setFeedback({ isCorrect: true, text: `正確！+${pointsEarned}` });
+
+      setTimeout(() => {
+        setFeedback(null);
+        spawnOrganism();
+      }, 800);
     } else {
+      setIncorrectSelections(prev => [...prev, ecosystem]);
       setScore(prev => Math.max(0, prev - 100));
-      setFeedback({ isCorrect: false, text: '錯誤！-100' });
+
+      if (nextAttempts < 3) {
+        setFeedback({ isCorrect: false, text: `錯誤！請再試一次 (-100)` });
+        setTimeout(() => {
+          setFeedback(null);
+        }, 1000);
+      } else {
+        if (qTimerRef.current) clearInterval(qTimerRef.current);
+        setFeedback({ isCorrect: false, text: `錯誤！已達 3 次上限` });
+        setTimeout(() => {
+          setFeedback(null);
+          spawnOrganism();
+        }, 1200);
+      }
     }
-    
-    setTimeout(() => {
-      setFeedback(null);
-      spawnOrganism();
-    }, feedback ? 250 : 400); // Slightly longer if timeout occurred previously
   };
 
   const handleSubmit = async () => {
@@ -273,15 +308,19 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto w-full">
                   {ECOSYSTEMS.map(eco => {
                     const isLand = ['針葉林', '落葉林', '闊葉林', '草原', '沙漠', '凍原'].includes(eco);
+                    const isIncorrect = incorrectSelections.includes(eco);
                     return (
                       <button
                         key={eco}
+                        disabled={isIncorrect}
                         onClick={() => handleAnswer(eco)}
                         className={cn(
-                          "group relative px-4 py-6 sm:py-10 rounded-[2rem] sm:rounded-[2.5rem] text-lg sm:text-3xl font-black transition-all active:scale-95 shadow-lg hover:shadow-2xl border-b-8 border-slate-200",
-                          isLand 
-                            ? "bg-amber-50 text-amber-800 hover:bg-amber-600 hover:text-white hover:border-amber-700" 
-                            : "bg-blue-50 text-blue-800 hover:bg-blue-600 hover:text-white hover:border-blue-700"
+                          "group relative px-4 py-6 sm:py-10 rounded-[2rem] sm:rounded-[2.5rem] text-lg sm:text-3xl font-black transition-all border-b-8 border-slate-200",
+                          isIncorrect
+                            ? "bg-red-50 text-red-500 border-red-200 line-through opacity-50 cursor-not-allowed shadow-none"
+                            : isLand 
+                              ? "bg-amber-50 text-amber-800 hover:bg-amber-600 hover:text-white hover:border-amber-700 active:scale-95 shadow-lg hover:shadow-2xl" 
+                              : "bg-blue-50 text-blue-800 hover:bg-blue-600 hover:text-white hover:border-blue-700 active:scale-95 shadow-lg hover:shadow-2xl"
                         )}
                       >
                         {eco}
@@ -330,14 +369,14 @@ export default function CreatureChallengeGame({ onComplete, onScore }: { onCompl
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <User size={16} /> 座號 (1-30)
+                        <User size={16} /> 座號 (1-45)
                       </label>
                       <select 
                         value={seatNum}
                         onChange={e => setSeatNum(Number(e.target.value))}
                         className="w-full p-4 sm:p-5 rounded-2xl bg-slate-50 border-2 border-slate-100 font-black text-lg sm:text-2xl outline-none focus:border-blue-500 text-center"
                       >
-                        {Array.from({ length: 30 }, (_, i) => (
+                        {Array.from({ length: 45 }, (_, i) => (
                           <option key={i+1} value={i+1}>{i+1} 號</option>
                         ))}
                       </select>

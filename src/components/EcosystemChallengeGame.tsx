@@ -44,6 +44,9 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
   const [timeLeft, setTimeLeft] = useState(60);
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; text: string } | null>(null);
   
+  const [questionAttempts, setQuestionAttempts] = useState(0);
+  const [incorrectSelections, setIncorrectSelections] = useState<string[]>([]);
+
   const [classNum, setClassNum] = useState<number>(1);
   const [seatNum, setSeatNum] = useState<number>(1);
   const [school, setSchool] = useState<string>("");
@@ -77,6 +80,8 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
   const startGame = () => {
     setScore(0);
     setTimeLeft(60);
+    setQuestionAttempts(0);
+    setIncorrectSelections([]);
     setSubmitted(false);
     setError(null);
     setGameState('playing');
@@ -91,26 +96,57 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
   const nextQuestion = () => {
     const randomIndex = Math.floor(Math.random() * QUESTIONS.length);
     setCurrentQuestion(QUESTIONS[randomIndex]);
+    setQuestionAttempts(0);
+    setIncorrectSelections([]);
     spawnTimeRef.current = Date.now();
   };
 
   const handleAnswer = (ecosystem: string) => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || gameState !== 'playing') return;
+    if (incorrectSelections.includes(ecosystem)) return;
+
+    const nextAttempts = questionAttempts + 1;
+    setQuestionAttempts(nextAttempts);
+
     const isCorrect = ecosystem === currentQuestion.answer;
     if (isCorrect) {
-      const timeTaken = (Date.now() - spawnTimeRef.current) / 1000;
-      const speedBonus = Math.max(0, Math.floor(800 * (1 - timeTaken / 15)));
-      const pointsEarned = 200 + speedBonus;
+      let pointsEarned = 0;
+      if (nextAttempts === 1) {
+        const timeTaken = (Date.now() - spawnTimeRef.current) / 1000;
+        const speedBonus = Math.max(0, Math.floor(800 * (1 - timeTaken / 15)));
+        pointsEarned = 200 + speedBonus;
+      } else if (nextAttempts === 2) {
+        pointsEarned = 120;
+      } else if (nextAttempts === 3) {
+        pointsEarned = 60;
+      } else {
+        pointsEarned = 0;
+      }
+
       setScore(prev => prev + pointsEarned);
       setFeedback({ isCorrect: true, text: `正確！+${pointsEarned}` });
+
+      setTimeout(() => {
+        setFeedback(null);
+        nextQuestion();
+      }, 800);
     } else {
+      setIncorrectSelections(prev => [...prev, ecosystem]);
       setScore(prev => Math.max(0, prev - 150));
-      setFeedback({ isCorrect: false, text: '錯誤！-150' });
+
+      if (nextAttempts < 3) {
+        setFeedback({ isCorrect: false, text: `錯誤！請再試一次 (-150)` });
+        setTimeout(() => {
+          setFeedback(null);
+        }, 1000);
+      } else {
+        setFeedback({ isCorrect: false, text: `錯誤！已達 3 次上限` });
+        setTimeout(() => {
+          setFeedback(null);
+          nextQuestion();
+        }, 1200);
+      }
     }
-    setTimeout(() => {
-      setFeedback(null);
-      nextQuestion();
-    }, 600);
   };
 
   const handleSubmit = async () => {
@@ -234,15 +270,19 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2 max-w-4xl mx-auto">
                   {ECOSYSTEM_OPTIONS.map(eco => {
                     const isLand = ['針葉林', '落葉林', '闊葉林', '草原', '沙漠', '凍原'].includes(eco);
+                    const isIncorrect = incorrectSelections.includes(eco);
                     return (
                       <button
                         key={eco}
+                        disabled={isIncorrect}
                         onClick={() => handleAnswer(eco)}
                         className={cn(
                           "p-3 rounded-xl border-2 font-bold transition-all text-sm h-full",
-                          isLand 
-                            ? "bg-emerald-50 border-emerald-100 text-emerald-800 hover:bg-emerald-600 hover:text-white" 
-                            : "bg-blue-50 border-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white"
+                          isIncorrect
+                            ? "bg-red-50 border-red-200 text-red-500 line-through opacity-50 cursor-not-allowed shadow-none"
+                            : isLand 
+                              ? "bg-emerald-50 border-emerald-100 text-emerald-800 hover:bg-emerald-600 hover:text-white" 
+                              : "bg-blue-50 border-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white"
                         )}
                       >
                         {eco}
@@ -291,14 +331,14 @@ export default function EcosystemChallengeGame({ onComplete, onScore }: { onComp
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <User size={14} /> 座號 (1-30)
+                        <User size={14} /> 座號 (1-45)
                       </label>
                       <select 
                         value={seatNum}
                         onChange={e => setSeatNum(Number(e.target.value))}
                         className="w-full p-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-black outline-none focus:border-blue-500"
                       >
-                        {Array.from({ length: 30 }, (_, i) => (
+                        {Array.from({ length: 45 }, (_, i) => (
                           <option key={i+1} value={i+1}>{i+1} 號</option>
                         ))}
                       </select>
