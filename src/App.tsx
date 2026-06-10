@@ -62,7 +62,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<EcosystemId>("home");
   const [unlockedTabs, setUnlockedTabs] = useState<EcosystemId[]>([
     "home",
-    "submit"
+    "submit",
+    "ai-challenge"
   ]);
   const [showUnlockAnim, setShowUnlockAnim] = useState<EcosystemId | null>(
     null,

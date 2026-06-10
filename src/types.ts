@@ -39,7 +39,7 @@ export const ECOSYSTEM_TABS: EcosystemTab[] = [
   { id: 'water-creatures', label: '水域生物', icon: 'Droplets', color: 'bg-cyan-600', locked: true },
   { id: 'comparison', label: '挑戰', icon: 'BarChart2', color: 'bg-purple-500', locked: true },
   { id: 'final', label: '總評量', icon: 'Trophy', color: 'bg-yellow-500', locked: true },
-  { id: 'ai-challenge', label: 'AI挑戰', icon: 'Zap', color: 'bg-indigo-500', locked: true },
+  { id: 'ai-challenge', label: 'AI挑戰', icon: 'Zap', color: 'bg-indigo-500', locked: false },
   { id: 'submit', label: '上傳積分', icon: 'CheckCircle2', color: 'bg-slate-800', locked: false },
   { id: 'creature-challenge', label: '生物挑戰', icon: 'Zap', color: 'bg-red-500', locked: true },
   { id: 'ecosystem-challenge', label: '生態挑戰', icon: 'Zap', color: 'bg-orange-500', locked: true },
